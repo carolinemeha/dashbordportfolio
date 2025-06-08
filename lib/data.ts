@@ -15,13 +15,13 @@ export interface Project {
 
 export interface Experience {
   id: string;
-  position: string;
+  title: string;
   company: string;
-  startDate: string;
-  endDate?: string;
-  current: boolean;
-  description: string;
   location: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  skills: string[];
 }
 
 export interface Skill {
@@ -36,17 +36,21 @@ export interface Service {
   title: string;
   description: string;
   icon: string;
-  price?: string;
+  features: string[];
 }
 
 export interface AboutInfo {
-  biography: string;
+  name: string;
+  title: string;
+  bio: string;
   photo: string;
-  quote: string;
   location: string;
   email: string;
   phone: string;
-  yearsExperience: number;
+  website?: string;
+  github?: string;
+  linkedin?: string;
+  twitter?: string;
 }
 
 export interface Education {
@@ -56,6 +60,9 @@ export interface Education {
   year: string;
   description: string;
   grade?: string;
+  startDate: string;
+  endDate?: string;
+  location?: string;
 }
 
 export interface Testimonial {
@@ -66,6 +73,7 @@ export interface Testimonial {
   content: string;
   avatar: string;
   rating: number;
+  date: string;
 }
 
 export interface ContactMessage {
@@ -102,12 +110,13 @@ let projects: Project[] = [
 let experiences: Experience[] = [
   {
     id: '1',
-    position: 'Senior Frontend Developer',
+    title: 'Senior Frontend Developer',
     company: 'Tech Corp',
+    location: 'San Francisco, CA',
     startDate: '2022-01-01',
-    current: true,
+    endDate: '2024-01-01',
     description: 'Leading frontend development team and implementing modern React applications.',
-    location: 'San Francisco, CA'
+    skills: ['React', 'TypeScript', 'Node.js', 'MongoDB', 'Stripe']
   }
 ];
 
@@ -123,18 +132,22 @@ let services: Service[] = [
     title: 'Web Development',
     description: 'Custom web applications using modern technologies',
     icon: 'Code',
-    price: '$50/hour'
+    features: ['React', 'Node.js', 'MongoDB', 'Stripe']
   }
 ];
 
 let aboutInfo: AboutInfo = {
-  biography: 'Passionate full-stack developer with 5+ years of experience...',
+  name: 'John Doe',
+  title: 'Full Stack Developer',
+  bio: 'Passionate full-stack developer with 5+ years of experience...',
   photo: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=400',
-  quote: 'Code is poetry written in logic.',
   location: 'San Francisco, CA',
   email: 'john@portfolio.com',
   phone: '+1 (555) 123-4567',
-  yearsExperience: 5
+  website: 'https://johndoe.com',
+  github: 'https://github.com/johndoe',
+  linkedin: 'https://linkedin.com/in/johndoe',
+  twitter: 'https://twitter.com/johndoe'
 };
 
 let education: Education[] = [
@@ -144,7 +157,10 @@ let education: Education[] = [
     school: 'Stanford University',
     year: '2019',
     description: 'Specialized in software engineering and artificial intelligence.',
-    grade: '3.8 GPA'
+    grade: '3.8 GPA',
+    startDate: '2015-09-01',
+    endDate: '2019-06-15',
+    location: 'Stanford, CA'
   }
 ];
 
@@ -156,7 +172,8 @@ let testimonials: Testimonial[] = [
     company: 'TechStart Inc.',
     content: 'Excellent developer with great attention to detail.',
     avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=400',
-    rating: 5
+    rating: 5,
+    date: '2024-05-20'
   }
 ];
 

@@ -2,23 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { dataService, CV } from '@/lib/data';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { dataService, CVInfo } from '@/lib/data';
 import { Edit, FileText, Download, Upload } from 'lucide-react';
-import CVForm from '@/components/admin/CVForm';
+import CVForm from '../../../components/admin/CVForm';
 
 export default function CVPage() {
-  const [cv, setCV] = useState<CV | null>(null);
+  const [cv, setCV] = useState<CVInfo | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
-    const cvData = dataService.getCV();
+    const cvData = dataService.getCVInfo();
     setCV(cvData);
   }, []);
 
-  const handleUpdate = (updates: Partial<CV>) => {
-    dataService.updateCV(updates);
-    setCV(dataService.getCV());
+  const handleUpdate = (updates: Partial<CVInfo>) => {
+    dataService.updateCV(updates as CVInfo);
+    setCV(dataService.getCVInfo());
     setIsFormOpen(false);
   };
 
@@ -33,8 +33,8 @@ export default function CVPage() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Ici, vous devrez implémenter la logique pour télécharger le fichier
-      // et mettre à jour le CV avec le nouveau fichier
+      // Here, you would implement the logic to upload the file
+      // and update the CV with the new file
       console.log('File to upload:', file);
     }
   };
@@ -74,22 +74,16 @@ export default function CVPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h4 className="text-sm font-medium text-gray-900">Titre</h4>
-                <p className="text-sm text-gray-600">{cv.title}</p>
+                <h4 className="text-sm font-medium text-gray-900">Nom du fichier</h4>
+                <p className="text-sm text-gray-600">{cv.fileName}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-900">Description</h4>
-                <p className="text-sm text-gray-600">{cv.description}</p>
+                <h4 className="text-sm font-medium text-gray-900">Date de téléchargement</h4>
+                <p className="text-sm text-gray-600">{cv.uploadDate}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-900">Dernière mise à jour</h4>
-                <p className="text-sm text-gray-600">
-                  {new Date(cv.lastUpdated).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
+                <h4 className="text-sm font-medium text-gray-900">Taille du fichier</h4>
+                <p className="text-sm text-gray-600">{cv.fileSize}</p>
               </div>
             </CardContent>
           </Card>
@@ -99,38 +93,18 @@ export default function CVPage() {
               <CardTitle>Fichier CV</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {cv.fileUrl ? (
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-5 w-5 text-gray-400" />
-                    <span className="text-sm text-gray-600">{cv.fileName}</span>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={cv.fileUrl} download>
-                      <Download className="h-4 w-4 mr-2" />
-                      Télécharger
-                    </a>
-                  </Button>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <FileText className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm text-gray-600">{cv.fileName}</span>
                 </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500 mb-4">Aucun fichier CV téléchargé</p>
-                  <div className="flex justify-center">
-                    <Button variant="outline" size="sm" asChild>
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept=".pdf,.doc,.docx"
-                          onChange={handleFileUpload}
-                        />
-                        <Upload className="h-4 w-4 mr-2" />
-                        Télécharger un fichier
-                      </label>
-                    </Button>
-                  </div>
-                </div>
-              )}
+                <Button variant="outline" size="sm" asChild>
+                  <a href={'/'} download>
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger
+                  </a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -145,4 +119,4 @@ export default function CVPage() {
       )}
     </div>
   );
-} 
+}

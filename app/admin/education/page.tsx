@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { dataService, Education } from '@/lib/data';
 import { Plus, Edit, Trash2, GraduationCap } from 'lucide-react';
-import EducationForm from '@/components/admin/EducationForm';
+import EducationForm from '../../../components/admin/EducationForm';
 
 export default function EducationPage() {
   const [education, setEducation] = useState<Education[]>([]);

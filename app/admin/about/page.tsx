@@ -2,23 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { dataService, About } from '@/lib/data';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { dataService, AboutInfo } from '@/lib/data';
 import { Edit, User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter } from 'lucide-react';
-import AboutForm from '@/components/admin/AboutForm';
+import AboutForm from '../../../components/admin/AboutForm';
 
 export default function AboutPage() {
-  const [about, setAbout] = useState<About | null>(null);
+  const [about, setAbout] = useState<AboutInfo | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
-    const aboutData = dataService.getAbout();
+    const aboutData = dataService.getAboutInfo();
     setAbout(aboutData);
   }, []);
 
-  const handleUpdate = (updates: Partial<About>) => {
-    dataService.updateAbout(updates);
-    setAbout(dataService.getAbout());
+  const handleUpdate = (updates: Partial<AboutInfo>) => {
+    const updatedAbout = dataService.updateAboutInfo(updates);
+    setAbout(updatedAbout);
     setIsFormOpen(false);
   };
 
@@ -146,4 +146,4 @@ export default function AboutPage() {
       )}
     </div>
   );
-} 
+}
