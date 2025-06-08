@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { dataService, Testimonial } from '@/lib/data';
+import { dataService, Testimonial } from '../../../lib/data';
 import { Plus, Edit, Trash2, MessageSquare, Star } from 'lucide-react';
-import TestimonialForm from '@/components/admin/TestimonialForm';
+import TestimonialForm from '../../../components/admin/TestimonialForm';
 
 export default function TestimonialsPage() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
@@ -121,6 +121,7 @@ export default function TestimonialsPage() {
                       />
                     ))}
                   </div>
+                  {/* eslint-disable-next-line react/no-unescaped-entities */}
                   <p className="text-gray-700 italic">"{testimonial.content}"</p>
                   <div className="flex items-center justify-between text-sm text-gray-500">
                     <span>{testimonial.company}</span>
@@ -150,4 +151,4 @@ export default function TestimonialsPage() {
       )}
     </div>
   );
-} 
+}
