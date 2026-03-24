@@ -2,6 +2,7 @@
 // In production, use NextAuth.js or similar
 
 export interface User {
+  avatar: string | undefined;
   id: string;
   email: string;
   name: string;
