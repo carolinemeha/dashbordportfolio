@@ -90,6 +90,7 @@ export interface CVInfo {
   fileName: string;
   uploadDate: string;
   fileSize: string;
+  url?: string;
 }
 
 // Mock data
@@ -327,10 +328,10 @@ export const dataService = {
   // Contact Messages
   getContactMessages: () => contactMessages,
   getContactMessage: (id: string) => contactMessages.find(m => m.id === id),
-  updateMessageStatus: (id: string, status: ContactMessage['status']) => {
+  updateContactMessage: (id: string, updates: Partial<ContactMessage>) => {
     const index = contactMessages.findIndex(m => m.id === id);
     if (index !== -1) {
-      contactMessages[index] = { ...contactMessages[index], status };
+      contactMessages[index] = { ...contactMessages[index], ...updates };
       return contactMessages[index];
     }
     return null;

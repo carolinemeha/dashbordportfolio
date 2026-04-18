@@ -5,119 +5,140 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Skill } from '@/lib/data';
+import { Wrench, Tag, Layers, Star } from 'lucide-react';
 
 interface SkillFormProps {
-  skill?: Skill;
-  onSubmit: (skill: Omit<Skill, 'id'>) => void;
+  skill?: Skill | null;
+  onSave: (skill: Omit<Skill, 'id'>) => void;
   onCancel: () => void;
 }
 
-export default function SkillForm({ skill, onSubmit, onCancel }: SkillFormProps) {
+export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
   const [formData, setFormData] = useState<Omit<Skill, 'id'>>({
     name: '',
-    category: 'technical',
-    level: 'intermediate',
+    category: 'Frontend',
+    level: 3,
     description: '',
     icon: ''
   });
 
+  const categories = ['Frontend', 'Backend', 'DevOps', 'Design', 'Outils', 'Langues', 'Soft Skills'];
+
   useEffect(() => {
     if (skill) {
       setFormData({
-        name: skill.name,
-        category: skill.category,
-        level: skill.level,
-        description: skill.description,
-        icon: skill.icon
+        name: skill.name || '',
+        category: skill.category || 'Frontend',
+        level: typeof skill.level === 'number' ? skill.level : 3,
+        description: skill.description || '',
+        icon: skill.icon || ''
       });
     }
   }, [skill]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSave(formData as any);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="name">Nom</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-        </div>
+    <Dialog open={true} onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-xl glass-card border-border/50">
+        <DialogHeader className="pb-4 border-b border-border/40">
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            <Wrench className="h-6 w-6 text-primary" />
+            {skill ? 'Modifier la compétence' : 'Nouvelle compétence'}
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            {skill ? 'Mettez à jour le niveau de cette compétence.' : 'Ajoutez un nouveau savoir-faire à votre profil.'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div>
-          <Label htmlFor="category">Catégorie</Label>
-          <Select
-            value={formData.category}
-            onValueChange={(value) => setFormData({ ...formData, category: value as Skill['category'] })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="technical">Technique</SelectItem>
-              <SelectItem value="soft">Soft Skills</SelectItem>
-              <SelectItem value="language">Langue</SelectItem>
-              <SelectItem value="tool">Outil</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-foreground">Nom de la compétence <span className="text-destructive">*</span></Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
+                placeholder="Ex: React, Figma, Python..."
+                required
+              />
+            </div>
+            
+            <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
+              <Label className="text-foreground flex items-center gap-2">
+                <Layers className="h-4 w-4 text-muted-foreground" /> Catégorie
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => (
+                  <Badge 
+                    key={cat} 
+                    variant={formData.category === cat ? "default" : "outline"}
+                    className={`cursor-pointer px-3 py-1.5 transition-all text-sm font-normal ${
+                      formData.category === cat 
+                      ? 'bg-primary text-primary-foreground border-transparent' 
+                      : 'bg-background hover:bg-secondary/80 border-border/60'
+                    }`}
+                    onClick={() => setFormData({ ...formData, category: cat })}
+                  >
+                    {cat}
+                  </Badge>
+                ))}
+              </div>
+              <div className="pt-2">
+                <Label htmlFor="category-custom" className="text-xs text-muted-foreground block mb-1">Ou catégorie personnalisée :</Label>
+                <Input
+                  id="category-custom"
+                  value={!categories.includes(formData.category) ? formData.category : ''}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 h-8 text-sm"
+                  placeholder="Tapez une autre catégorie..."
+                />
+              </div>
+            </div>
 
-        <div>
-          <Label htmlFor="level">Niveau</Label>
-          <Select
-            value={formData.level}
-            onValueChange={(value) => setFormData({ ...formData, level: value as Skill['level'] })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="beginner">Débutant</SelectItem>
-              <SelectItem value="intermediate">Intermédiaire</SelectItem>
-              <SelectItem value="advanced">Avancé</SelectItem>
-              <SelectItem value="expert">Expert</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="level" className="text-foreground flex items-center gap-2">
+                  <Star className="h-4 w-4 text-primary" /> Niveau de maîtrise
+                </Label>
+                <span className="text-lg font-bold text-primary">{formData.level}/5</span>
+              </div>
+              <input
+                id="level"
+                type="range"
+                min="1"
+                max="5"
+                step="1"
+                value={formData.level}
+                onChange={(e) => setFormData({ ...formData, level: parseInt(e.target.value) })}
+                className="w-full accent-primary h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>Débutant</span>
+                <span>Intermédiaire</span>
+                <span>Expert</span>
+              </div>
+            </div>
 
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={3}
-          />
-        </div>
+          </div>
 
-        <div>
-          <Label htmlFor="icon">Icône (nom de classe Lucide)</Label>
-          <Input
-            id="icon"
-            value={formData.icon}
-            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-            placeholder="ex: Code, Database, Server"
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-end space-x-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Annuler
-        </Button>
-        <Button type="submit">
-          {skill ? 'Modifier' : 'Ajouter'}
-        </Button>
-      </div>
-    </form>
+          <DialogFooter className="pt-4 border-t border-border/40 sm:justify-end">
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Annuler
+            </Button>
+            <Button type="submit" className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25">
+              {skill ? 'Enregistrer les modifications' : 'Ajouter la compétence'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 } 

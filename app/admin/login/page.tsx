@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Lock } from 'lucide-react';
+import { Lock, User, KeyRound, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,6 +24,9 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Small artificial delay to simulate network for premium feel
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       const user = authenticateUser(email, password);
       
       if (user) {
@@ -39,73 +43,115 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <Lock className="mx-auto h-12 w-12 text-blue-600" />
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Administration Portfolio
+    <div className="min-h-screen relative flex items-center justify-center bg-background overflow-hidden p-4">
+      {/* Premium Background Elements */}
+      <div className="absolute inset-0 bg-grid-slate-900/[0.04] dark:bg-grid-slate-400/[0.05] bg-[bottom_1px_center]" />
+      <div className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px] opacity-50 dark:opacity-20 pointer-events-none" />
+      <div className="absolute right-0 bottom-0 translate-x-1/3 translate-y-1/3 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[100px] opacity-50 dark:opacity-20 pointer-events-none" />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, type: 'spring', damping: 25, stiffness: 200 }}
+        className="max-w-md w-full z-10 relative"
+      >
+        <div className="text-center mb-8">
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring' }}
+            className="w-16 h-16 bg-gradient-to-tr from-primary to-indigo-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-primary/30 mb-6"
+          >
+            <Lock className="h-8 w-8 text-white relative z-10" />
+          </motion.div>
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
+            Espace Sécurisé
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Connectez-vous pour accéder au tableau de bord
+          <p className="mt-2 text-sm text-muted-foreground">
+            Connectez-vous pour accéder à l'administration
           </p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Connexion</CardTitle>
+        <Card className="glass-card border-border/40 shadow-2xl backdrop-blur-xl bg-background/60">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">Identification requise</CardTitle>
             <CardDescription>
-              Utilisez vos identifiants administrateur pour vous connecter
+              Entrez vos identifiants administrateur.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="flex items-center gap-2 text-foreground/80">
+                  <User className="h-4 w-4 text-muted-foreground" /> Adresse Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="admin@portfolio.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="bg-secondary/40 border-border/50 focus-visible:ring-primary/50 h-11"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password" className="flex items-center gap-2 text-foreground/80">
+                  <KeyRound className="h-4 w-4 text-muted-foreground" /> Mot de passe
+                </Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Votre mot de passe"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="bg-secondary/40 border-border/50 focus-visible:ring-primary/50 h-11"
                   required
                 />
               </div>
+              
               {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                  <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+                    <AlertDescription className="text-xs font-semibold">{error}</AlertDescription>
+                  </Alert>
+                </motion.div>
               )}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="pt-2 pb-6">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/25 group transition-all"
                 disabled={isLoading}
               >
-                {isLoading ? 'Connexion...' : 'Se connecter'}
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     Authentification...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    Se connecter <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                )}
               </Button>
             </CardFooter>
           </form>
         </Card>
         
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Démo: admin@portfolio.com / admin123
-          </p>
-        </div>
-      </div>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8 text-center"
+        >
+          <div className="inline-block p-[1px] rounded-lg bg-gradient-to-r from-border/50 via-border to-border/50">
+            <div className="px-4 py-2 bg-background/50 backdrop-blur-sm rounded-[7px] text-xs font-mono text-muted-foreground flexitems-center gap-2">
+              <span className="text-foreground font-semibold">Demo:</span> admin@portfolio.com <span className="opacity-50">|</span> admin123
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

@@ -2,10 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { dataService, AboutInfo } from '@/lib/data';
-import { Edit, User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter } from 'lucide-react';
+import { Edit, User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter, AtSign, Info } from 'lucide-react';
 import AboutForm from '../../../components/admin/AboutForm';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
 
 export default function AboutPage() {
   const [about, setAbout] = useState<AboutInfo | null>(null);
@@ -31,110 +45,165 @@ export default function AboutPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">À propos</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Gérez vos informations personnelles
-          </p>
+          <motion.h1 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
+          >
+            À propos de moi
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mt-2 text-sm text-muted-foreground"
+          >
+            Gérez vos informations personnelles et vos coordonnées
+          </motion.p>
         </div>
-        <Button onClick={openEditForm}>
-          <Edit className="h-4 w-4 mr-2" />
-          Modifier
-        </Button>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+          <Button onClick={openEditForm} className="shadow-lg hover:shadow-primary/25 transition-all">
+            <Edit className="h-4 w-4 mr-2" />
+            {about ? 'Modifier le profil' : 'Créer mon profil'}
+          </Button>
+        </motion.div>
       </div>
 
       {!about ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <User className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune information</h3>
-            <p className="text-gray-500 mb-4">Commencez par ajouter vos informations personnelles</p>
-            <Button onClick={openEditForm}>
-              <Edit className="h-4 w-4 mr-2" />
-              Ajouter mes informations
-            </Button>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="glass-card border-dashed border-2 border-border/50 bg-secondary/20">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="p-4 bg-primary/10 rounded-full mb-4">
+                <User className="h-12 w-12 text-primary/60" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Aucune information</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm">Commencez par ajouter vos informations personnelles pour que les visiteurs puissent vous découvrir.</p>
+              <Button onClick={openEditForm} size="lg">
+                <Edit className="h-4 w-4 mr-2" />
+                Ajouter mes informations
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations personnelles</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <User className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{about.name}</p>
-                  <p className="text-sm text-gray-500">{about.title}</p>
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
+          <motion.div variants={itemVariants} className="lg:col-span-1 space-y-6">
+            {/* Profil Rapide */}
+            <Card className="glass-card overflow-hidden relative">
+              <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-primary/20 to-transparent"></div>
+              <CardContent className="pt-10 flex flex-col items-center text-center relative z-10">
+                <div className="w-24 h-24 rounded-full bg-secondary border-4 border-background shadow-xl flex items-center justify-center mb-4 overflow-hidden relative">
+                   {about.avatar ? (
+                     <img src={about.avatar} alt={about.name} className="w-full h-full object-cover" />
+                   ) : (
+                    <User className="h-10 w-10 text-muted-foreground opacity-50" />
+                   )}
                 </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-gray-400" />
-                <p className="text-sm text-gray-600">{about.email}</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-gray-400" />
-                <p className="text-sm text-gray-600">{about.phone}</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <MapPin className="h-5 w-5 text-gray-400" />
-                <p className="text-sm text-gray-600">{about.location}</p>
-              </div>
-            </CardContent>
-          </Card>
+                <h2 className="text-2xl font-bold text-foreground">{about.name}</h2>
+                <p className="text-primary font-medium mt-1">{about.title}</p>
+                
+                <div className="w-full h-px bg-border/40 my-6"></div>
+                
+                <div className="w-full space-y-4 text-left">
+                  <div className="flex items-center space-x-3 group">
+                    <div className="p-2 bg-secondary rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground/80 truncate">{about.email}</p>
+                  </div>
+                  <div className="flex items-center space-x-3 group">
+                    <div className="p-2 bg-secondary rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <Phone className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground/80">{about.phone}</p>
+                  </div>
+                  <div className="flex items-center space-x-3 group">
+                    <div className="p-2 bg-secondary rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <MapPin className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground/80">{about.location}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Réseaux sociaux</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {about.website && (
-                <div className="flex items-center space-x-3">
-                  <Globe className="h-5 w-5 text-gray-400" />
-                  <a href={about.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                    {about.website}
+            {/* Réseaux Sociaux */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3 border-b border-border/30 bg-secondary/10">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AtSign className="h-4 w-4 text-primary" />
+                  Présence en ligne
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                {about.website && (
+                  <a href={about.website} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                    <div className="flex items-center space-x-3">
+                      <Globe className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-sm font-medium text-foreground/80">Site Intenet</span>
+                    </div>
                   </a>
-                </div>
-              )}
-              {about.github && (
-                <div className="flex items-center space-x-3">
-                  <Github className="h-5 w-5 text-gray-400" />
-                  <a href={about.github} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                    {about.github}
+                )}
+                {about.github && (
+                  <a href={about.github} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                    <div className="flex items-center space-x-3">
+                      <Github className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-sm font-medium text-foreground/80">GitHub</span>
+                    </div>
                   </a>
-                </div>
-              )}
-              {about.linkedin && (
-                <div className="flex items-center space-x-3">
-                  <Linkedin className="h-5 w-5 text-gray-400" />
-                  <a href={about.linkedin} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                    {about.linkedin}
+                )}
+                {about.linkedin && (
+                  <a href={about.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                    <div className="flex items-center space-x-3">
+                      <Linkedin className="h-5 w-5 text-muted-foreground group-hover:text-[#0A66C2] transition-colors" />
+                      <span className="text-sm font-medium text-foreground/80">LinkedIn</span>
+                    </div>
                   </a>
-                </div>
-              )}
-              {about.twitter && (
-                <div className="flex items-center space-x-3">
-                  <Twitter className="h-5 w-5 text-gray-400" />
-                  <a href={about.twitter} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                    {about.twitter}
+                )}
+                {about.twitter && (
+                  <a href={about.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                    <div className="flex items-center space-x-3">
+                      <Twitter className="h-5 w-5 text-muted-foreground group-hover:text-[#1DA1F2] transition-colors" />
+                      <span className="text-sm font-medium text-foreground/80">Twitter / X</span>
+                    </div>
                   </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+                {(!about.website && !about.github && !about.linkedin && !about.twitter) && (
+                  <p className="text-sm text-muted-foreground italic">Aucun lien renseigné.</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>À propos de moi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 whitespace-pre-wrap">{about.bio}</p>
-            </CardContent>
-          </Card>
-        </div>
+          <motion.div variants={itemVariants} className="lg:col-span-2">
+            <Card className="glass-card h-full">
+              <CardHeader className="border-b border-border/30 bg-secondary/10">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Info className="h-5 w-5 text-primary" />
+                  Biographie
+                </CardTitle>
+                <CardDescription>
+                  Ce texte est affiché sur votre page d'accueil pour vous présenter.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none">
+                  <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                    {about.bio || "Aucune biographie."}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
       )}
 
       {isFormOpen && (
