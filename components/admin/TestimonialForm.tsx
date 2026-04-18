@@ -7,19 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Testimonial } from '@/lib/data';
-import { MessageSquare, User, Building2, Briefcase, Star, ImageIcon } from 'lucide-react';
+import { MessageSquare, User, Briefcase, Star, ImageIcon } from 'lucide-react';
+import ImageUpload from './ImageUpload';
 
 interface TestimonialFormProps {
   testimonial: Testimonial | null;
-  onSave: (data: any) => void;
+  onSave: (data: Omit<Testimonial, 'id'>) => void;
   onCancel: () => void;
 }
 
 export default function TestimonialForm({ testimonial, onSave, onCancel }: TestimonialFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Omit<Testimonial, 'id'>>({
     name: '',
-    position: '',
-    company: '',
+    role: '',
     content: '',
     rating: 5,
     avatar: '',
@@ -29,10 +29,9 @@ export default function TestimonialForm({ testimonial, onSave, onCancel }: Testi
     if (testimonial) {
       setFormData({
         name: testimonial.name,
-        position: testimonial.position,
-        company: testimonial.company,
+        role: testimonial.role,
         content: testimonial.content,
-        rating: testimonial.rating,
+        rating: testimonial.rating ?? 5,
         avatar: testimonial.avatar,
       });
     }
@@ -45,7 +44,7 @@ export default function TestimonialForm({ testimonial, onSave, onCancel }: Testi
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-2xl glass-card border-border/50 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl glass-card border-border/50 max-h-[90vh] overflow-y-auto text-foreground">
         <DialogHeader className="pb-4 border-b border-border/40">
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-primary" />
@@ -69,50 +68,33 @@ export default function TestimonialForm({ testimonial, onSave, onCancel }: Testi
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
+                  placeholder="Ex: Caroline Meha"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="position" className="text-foreground flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" /> Poste / Fonction <span className="text-destructive">*</span>
+                <Label htmlFor="role" className="text-foreground flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" /> Rôle / Entreprise <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="position"
-                  value={formData.position}
-                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  id="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
+                  placeholder="Ex: CEO, Entreprise X"
                   required
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="company" className="text-foreground flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" /> Entreprise <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="avatar" className="text-foreground flex items-center gap-2">
-                   <ImageIcon className="h-4 w-4 text-muted-foreground" /> URL de l&apos;avatar
-                </Label>
-                <Input
-                  id="avatar"
-                  value={formData.avatar}
-                  onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder="https://..."
-                />
-              </div>
+            <div className="space-y-2">
+              <ImageUpload
+                label="Avatar du client"
+                value={formData.avatar}
+                onChange={(url) => setFormData({ ...formData, avatar: url })}
+                path="testimonials"
+              />
             </div>
 
             <div className="space-y-2">
@@ -123,13 +105,14 @@ export default function TestimonialForm({ testimonial, onSave, onCancel }: Testi
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 rows={5}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y"
+                placeholder="Que disent-ils de vous ?"
                 required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="rating" className="text-foreground flex items-center gap-2 mb-2">
-                <Star className="h-4 w-4 text-muted-foreground" /> Note sur 5 <span className="text-destructive">*</span>
+                <Star className="h-4 w-4 text-muted-foreground" /> Note (Optionnel)
               </Label>
               <div className="flex gap-2 items-center bg-secondary/30 border border-border/50 p-2 rounded-md w-fit">
                  {[1, 2, 3, 4, 5].map((star) => (
@@ -140,7 +123,7 @@ export default function TestimonialForm({ testimonial, onSave, onCancel }: Testi
                      className="focus:outline-none transition-transform hover:scale-110"
                    >
                      <Star 
-                        className={`h-7 w-7 ${star <= formData.rating ? 'text-yellow-400 fill-yellow-400 drop-shadow-sm' : 'text-muted-foreground/30'}`} 
+                        className={`h-7 w-7 ${star <= (formData.rating || 0) ? 'text-yellow-400 fill-yellow-400 drop-shadow-sm' : 'text-muted-foreground/30'}`} 
                      />
                    </button>
                  ))}
@@ -150,14 +133,14 @@ export default function TestimonialForm({ testimonial, onSave, onCancel }: Testi
 
           </div>
           
-          <DialogFooter className="pt-6 border-t border-border/40 sm:justify-end">
+          <div className="pt-6 border-t border-border/40 flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onCancel}>
               Annuler
             </Button>
             <Button type="submit" className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25">
-              Enregistrer
+              {testimonial ? 'Enregistrer les modifications' : 'Ajouter le témoignage'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

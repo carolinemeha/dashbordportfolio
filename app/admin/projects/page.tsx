@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { dataService, Project } from '@/lib/data';
-import { Plus, Edit, Trash2, ExternalLink, Github, Star, FolderOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Github, Star, FolderOpen, Clock, Activity } from 'lucide-react';
 import ProjectForm from '@/components/admin/ProjectForm';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,26 +29,39 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    setProjects(dataService.getProjects());
+    const fetchData = async () => {
+      const data = await dataService.getProjects();
+      setProjects(data || []);
+    };
+    fetchData();
   }, []);
 
-  const handleCreate = (projectData: Omit<Project, 'id'>) => {
-    const newProject = dataService.createProject(projectData);
-    setProjects(dataService.getProjects());
-    setIsFormOpen(false);
+  const handleCreate = async (projectData: Omit<Project, 'id'>) => {
+    const newProject = await dataService.createProject(projectData);
+    if (newProject) {
+      const refreshedData = await dataService.getProjects();
+      setProjects(refreshedData);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleUpdate = (id: string, updates: Partial<Project>) => {
-    dataService.updateProject(id, updates);
-    setProjects(dataService.getProjects());
-    setEditingProject(null);
-    setIsFormOpen(false);
+  const handleUpdate = async (id: string, updates: Partial<Project>) => {
+    const updatedProject = await dataService.updateProject(id, updates);
+    if (updatedProject) {
+      const refreshedData = await dataService.getProjects();
+      setProjects(refreshedData);
+      setEditingProject(null);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce projet ?')) {
-      dataService.deleteProject(id);
-      setProjects(dataService.getProjects());
+      const success = await dataService.deleteProject(id);
+      if (success) {
+        const refreshedData = await dataService.getProjects();
+        setProjects(refreshedData);
+      }
     }
   };
 
@@ -67,22 +80,19 @@ export default function ProjectsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
             className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
           >
             Projets portfolio
           </motion.h1>
           <motion.p 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
             className="mt-2 text-sm text-muted-foreground"
           >
             Gérez et mettez en valeur vos réalisations
           </motion.p>
         </div>
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
           <Button onClick={() => setIsFormOpen(true)} className="shadow-lg hover:shadow-primary/25 transition-all">
             <Plus className="h-4 w-4 mr-2" />
             Nouveau projet
@@ -135,6 +145,9 @@ export default function ProjectsPage() {
                         En vedette
                       </Badge>
                     )}
+                    <Badge variant="secondary" className="absolute top-3 left-3 bg-background/80 backdrop-blur-md shadow-sm border-none uppercase text-[10px] tracking-wider">
+                      {project.category}
+                    </Badge>
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
                       <Button variant="secondary" size="sm" onClick={() => openEditForm(project)} className="border-none shadow-lg transform -translate-y-4 group-hover:translate-y-0 transition-all duration-300">
                         <Edit className="h-4 w-4 mr-2" />
@@ -146,7 +159,14 @@ export default function ProjectsPage() {
                     </div>
                   </div>
                   <CardHeader className="flex-none p-5 pb-3">
-                    <CardTitle className="text-xl">{project.title}</CardTitle>
+                    <div className="flex justify-between items-start gap-2">
+                       <CardTitle className="text-xl line-clamp-1">{project.title}</CardTitle>
+                       {project.status === 'in-progress' && (
+                         <div className="text-xs flex items-center text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 whitespace-nowrap">
+                            <Activity className="w-3 h-3 mr-1 animate-pulse" /> En cours
+                         </div>
+                       )}
+                    </div>
                     <CardDescription className="line-clamp-2 mt-2">{project.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col flex-1 p-5 pt-0">
@@ -162,22 +182,29 @@ export default function ProjectsPage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex space-x-2 pt-2 border-t border-border/40">
-                      {project.liveUrl && (
-                        <Button variant="ghost" size="sm" asChild className="h-8 text-xs text-muted-foreground hover:text-primary px-2">
-                          <a href={project.liveUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3.5 w-3.5 mr-1" />
-                            Live
-                          </a>
-                        </Button>
-                      )}
-                      {project.githubUrl && (
-                        <Button variant="ghost" size="sm" asChild className="h-8 text-xs text-muted-foreground hover:text-foreground px-2">
-                          <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
-                            <Github className="h-3.5 w-3.5 mr-1" />
-                            Code
-                          </a>
-                        </Button>
+                    <div className="flex justify-between items-center pt-3 border-t border-border/40">
+                      <div className="flex space-x-2">
+                        {project.demo && (
+                          <Button variant="ghost" size="sm" asChild className="h-8 text-xs text-muted-foreground hover:text-primary px-2">
+                            <a href={project.demo} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                              Demo
+                            </a>
+                          </Button>
+                        )}
+                        {project.github && (
+                          <Button variant="ghost" size="sm" asChild className="h-8 text-xs text-muted-foreground hover:text-foreground px-2">
+                            <a href={project.github} target="_blank" rel="noopener noreferrer">
+                              <Github className="h-3.5 w-3.5 mr-1" />
+                              Code
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                      {project.date && (
+                         <div className="text-xs text-muted-foreground flex items-center">
+                            <Clock className="w-3 h-3 mr-1" /> {project.date}
+                         </div>
                       )}
                     </div>
                   </CardContent>

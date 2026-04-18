@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { dataService, Skill } from '@/lib/data';
 import { Plus, Edit, Trash2, Wrench, Layers } from 'lucide-react';
 import SkillForm from '@/components/admin/SkillForm';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -17,9 +17,17 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { 
+      type: "spring", 
+      stiffness: 300, 
+      damping: 24 
+    } 
+  },
   exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
 };
 
@@ -29,26 +37,39 @@ export default function SkillsPage() {
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
 
   useEffect(() => {
-    setSkills(dataService.getSkills());
+    const fetchData = async () => {
+      const data = await dataService.getSkills();
+      setSkills(data || []);
+    };
+    fetchData();
   }, []);
 
-  const handleCreate = (skillData: Omit<Skill, 'id'>) => {
-    const newSkill = dataService.createSkill(skillData);
-    setSkills(dataService.getSkills());
-    setIsFormOpen(false);
+  const handleCreate = async (skillData: Omit<Skill, 'id'>) => {
+    const newSkill = await dataService.createSkill(skillData);
+    if (newSkill) {
+      const refreshedData = await dataService.getSkills();
+      setSkills(refreshedData);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleUpdate = (id: string, updates: Partial<Skill>) => {
-    dataService.updateSkill(id, updates);
-    setSkills(dataService.getSkills());
-    setEditingSkill(null);
-    setIsFormOpen(false);
+  const handleUpdate = async (id: string, updates: Partial<Skill>) => {
+    const updated = await dataService.updateSkill(id, updates);
+    if (updated) {
+      const refreshedData = await dataService.getSkills();
+      setSkills(refreshedData);
+      setEditingSkill(null);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette compétence ?')) {
-      dataService.deleteSkill(id);
-      setSkills(dataService.getSkills());
+      const success = await dataService.deleteSkill(id);
+      if (success) {
+        const refreshedData = await dataService.getSkills();
+        setSkills(refreshedData);
+      }
     }
   };
 
@@ -76,22 +97,19 @@ export default function SkillsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
             className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
           >
             Compétences
           </motion.h1>
           <motion.p 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
             className="mt-2 text-sm text-muted-foreground"
           >
             Gérez l'inventaire de votre savoir-faire technique
           </motion.p>
         </div>
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
           <Button onClick={() => setIsFormOpen(true)} className="shadow-lg hover:shadow-primary/25 transition-all">
             <Plus className="h-4 w-4 mr-2" />
             Nouvelle compétence
@@ -158,14 +176,16 @@ export default function SkillsPage() {
                           
                           <div className="space-y-1.5 mt-auto">
                             <div className="flex justify-between text-xs text-muted-foreground font-medium">
-                              <span>Niveau</span>
-                              <span>{skill.level}/5 <span className="text-primary ml-1">★</span></span>
+                              <span>Maîtrise</span>
+                              <span className="text-primary">{skill.level}%</span>
                             </div>
-                            <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden border border-border/20">
+                            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden border border-border/20 shadow-inner">
                               <div 
-                                className="bg-primary h-1.5 rounded-full transition-all duration-500" 
-                                style={{ width: `${(skill.level / 5) * 100}%` }}
-                              ></div>
+                                className="bg-primary h-2 rounded-full transition-all duration-500 relative" 
+                                style={{ width: `${skill.level}%` }}
+                              >
+                                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                              </div>
                             </div>
                           </div>
                         </motion.div>

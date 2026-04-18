@@ -8,9 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Project } from '@/lib/data';
-import { X, FolderOpen, Link as LinkIcon, Github, Calendar, Tag } from 'lucide-react';
+import { X, FolderOpen, Link as LinkIcon, Github, Calendar, Tag, Activity, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ImageUpload from './ImageUpload';
 
 interface ProjectFormProps {
   project?: Project | null;
@@ -23,11 +25,13 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
     title: project?.title || '',
     description: project?.description || '',
     image: project?.image || '',
-    liveUrl: project?.liveUrl || '',
-    githubUrl: project?.githubUrl || '',
+    demo: project?.demo || '',
+    github: project?.github || '',
     technologies: project?.technologies || [],
+    category: project?.category || 'fullstack',
+    status: project?.status || 'completed',
+    date: project?.date || new Date().toISOString().split('T')[0].substring(0, 7), // YYYY-MM
     featured: project?.featured || false,
-    createdAt: project?.createdAt || new Date().toISOString().split('T')[0]
   });
 
   const [newTech, setNewTech] = useState('');
@@ -56,7 +60,7 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden glass-card border-border/50">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden glass-card border-border/50">
         <DialogHeader className="pb-4 border-b border-border/40">
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <FolderOpen className="h-6 w-6 text-primary" />
@@ -80,17 +84,54 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
                 required
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="createdAt" className="text-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" /> Date de création
+              <Label htmlFor="date" className="text-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" /> Date (ex: YYYY-MM) <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="createdAt"
-                type="date"
-                value={formData.createdAt}
+                id="date"
+                type="month"
+                value={formData.date}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                onChange={(e) => setFormData({ ...formData, createdAt: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-foreground flex items-center gap-2">
+                 <LayoutGrid className="h-4 w-4 text-muted-foreground" /> Catégorie <span className="text-destructive">*</span>
+              </Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                <SelectTrigger className="bg-secondary/30 border-border/50">
+                  <SelectValue placeholder="Sélectionnez une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="frontend">Frontend</SelectItem>
+                  <SelectItem value="fullstack">Fullstack</SelectItem>
+                  <SelectItem value="ui-ux">UI/UX Design</SelectItem>
+                  <SelectItem value="design">Design Graphique</SelectItem>
+                  <SelectItem value="logo">Logo / Branding</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status" className="text-foreground flex items-center gap-2">
+                 <Activity className="h-4 w-4 text-muted-foreground" /> Statut <span className="text-destructive">*</span>
+              </Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                <SelectTrigger className="bg-secondary/30 border-border/50">
+                  <SelectValue placeholder="Sélectionnez un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed">Terminé</SelectItem>
+                  <SelectItem value="in-progress">En cours</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -102,47 +143,43 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y min-h-[100px]"
               placeholder="Décrivez les objectifs, défis et résultats du projet..."
-              rows={4}
+              rows={3}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image" className="text-foreground">URL de l'image de couverture <span className="text-destructive">*</span></Label>
-            <Input
-              id="image"
-              type="url"
+            <ImageUpload
+              label="Image de couverture"
               value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-              placeholder="https://example.com/image.jpg"
-              required
+              onChange={(url) => setFormData({ ...formData, image: url })}
+              path="work"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="liveUrl" className="text-foreground flex items-center gap-2">
-                <LinkIcon className="h-4 w-4 text-muted-foreground" /> URL du site (Live)
+              <Label htmlFor="demo" className="text-foreground flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-muted-foreground" /> URL du site (Démo)
               </Label>
               <Input
-                id="liveUrl"
+                id="demo"
                 type="url"
-                value={formData.liveUrl}
-                onChange={(e) => setFormData({ ...formData, liveUrl: e.target.value })}
+                value={formData.demo}
+                onChange={(e) => setFormData({ ...formData, demo: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
                 placeholder="https://monsite.com"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="githubUrl" className="text-foreground flex items-center gap-2">
+              <Label htmlFor="github" className="text-foreground flex items-center gap-2">
                 <Github className="h-4 w-4 text-muted-foreground" /> URL Git/Source
               </Label>
               <Input
-                id="githubUrl"
+                id="github"
                 type="url"
-                value={formData.githubUrl}
-                onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value })}
+                value={formData.github}
+                onChange={(e) => setFormData({ ...formData, github: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
                 placeholder="https://github.com/vous/repo"
               />

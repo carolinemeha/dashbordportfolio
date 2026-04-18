@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skill } from '@/lib/data';
-import { Wrench, Tag, Layers, Star } from 'lucide-react';
+import { Wrench, Tag, Layers, Star, Percent } from 'lucide-react';
 
 interface SkillFormProps {
   skill?: Skill | null;
@@ -20,21 +19,17 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
   const [formData, setFormData] = useState<Omit<Skill, 'id'>>({
     name: '',
     category: 'Frontend',
-    level: 3,
-    description: '',
-    icon: ''
+    level: 80
   });
 
-  const categories = ['Frontend', 'Backend', 'DevOps', 'Design', 'Outils', 'Langues', 'Soft Skills'];
+  const categories = ['Frontend', 'Backend', 'Mobile', 'Design', 'Commerce', 'Autres'];
 
   useEffect(() => {
     if (skill) {
       setFormData({
         name: skill.name || '',
-        category: skill.category || 'Frontend',
-        level: typeof skill.level === 'number' ? skill.level : 3,
-        description: skill.description || '',
-        icon: skill.icon || ''
+        category: (skill.category as any) || 'Frontend',
+        level: typeof skill.level === 'number' ? skill.level : 80
       });
     }
   }, [skill]);
@@ -46,14 +41,14 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="sm:max-w-xl glass-card border-border/50">
+      <DialogContent className="sm:max-w-xl glass-card border-border/50 text-foreground">
         <DialogHeader className="pb-4 border-b border-border/40">
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <Wrench className="h-6 w-6 text-primary" />
             {skill ? 'Modifier la compétence' : 'Nouvelle compétence'}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {skill ? 'Mettez à jour le niveau de cette compétence.' : 'Ajoutez un nouveau savoir-faire à votre profil.'}
+            {skill ? 'Mettez à jour votre niveau de maîtrise.' : 'Ajoutez un nouveau savoir-faire à votre profil.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -85,45 +80,35 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
                       ? 'bg-primary text-primary-foreground border-transparent' 
                       : 'bg-background hover:bg-secondary/80 border-border/60'
                     }`}
-                    onClick={() => setFormData({ ...formData, category: cat })}
+                    onClick={() => setFormData({ ...formData, category: cat as any })}
                   >
                     {cat}
                   </Badge>
                 ))}
-              </div>
-              <div className="pt-2">
-                <Label htmlFor="category-custom" className="text-xs text-muted-foreground block mb-1">Ou catégorie personnalisée :</Label>
-                <Input
-                  id="category-custom"
-                  value={!categories.includes(formData.category) ? formData.category : ''}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 h-8 text-sm"
-                  placeholder="Tapez une autre catégorie..."
-                />
               </div>
             </div>
 
             <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
               <div className="flex justify-between items-center">
                 <Label htmlFor="level" className="text-foreground flex items-center gap-2">
-                  <Star className="h-4 w-4 text-primary" /> Niveau de maîtrise
+                  <Percent className="h-4 w-4 text-primary" /> Niveau de maîtrise (%)
                 </Label>
-                <span className="text-lg font-bold text-primary">{formData.level}/5</span>
+                <span className="text-lg font-bold text-primary">{formData.level}%</span>
               </div>
               <input
                 id="level"
                 type="range"
-                min="1"
-                max="5"
-                step="1"
+                min="0"
+                max="100"
+                step="5"
                 value={formData.level}
                 onChange={(e) => setFormData({ ...formData, level: parseInt(e.target.value) })}
                 className="w-full accent-primary h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-xs text-muted-foreground px-1">
-                <span>Débutant</span>
-                <span>Intermédiaire</span>
-                <span>Expert</span>
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
               </div>
             </div>
 

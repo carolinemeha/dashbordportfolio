@@ -1,8 +1,9 @@
 'use client';
 
-import { getStoredUser } from '@/lib/auth';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Menu, UserCircle } from 'lucide-react';
+import { Menu, UserCircle, LogOut } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { motion } from 'framer-motion';
 
@@ -11,7 +12,27 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const user = getStoredUser();
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setUser(data))
+      .catch(() => setUser(null));
+  }, []);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      router.push('/admin/login');
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <motion.header 
@@ -39,14 +60,28 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <ThemeToggle />
             
             {user && (
-              <div className="flex items-center pl-4 border-l border-border/50">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center mr-3 border border-primary/20">
+              <div className="flex items-center gap-3 pl-4 border-l border-border/50">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
                   <UserCircle className="h-5 w-5 text-primary" />
                 </div>
                 <div className="hidden sm:flex flex-col items-start leading-none">
                   <span className="text-sm font-medium text-foreground">{user.name}</span>
                   <span className="text-xs text-muted-foreground mt-1">Administrateur</span>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Se déconnecter"
+                >
+                  {isLoggingOut ? (
+                    <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <LogOut className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             )}
           </div>

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authenticateUser, storeUser } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,18 +23,22 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Small artificial delay to simulate network for premium feel
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const user = authenticateUser(email, password);
-      
-      if (user) {
-        storeUser(user);
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
         router.push('/admin/dashboard');
+        router.refresh();
       } else {
-        setError('Email ou mot de passe incorrect');
+        setError(data.error ?? 'Email ou mot de passe incorrect');
       }
-    } catch (err) {
+    } catch {
       setError('Une erreur est survenue lors de la connexion');
     } finally {
       setIsLoading(false);
@@ -93,6 +96,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-secondary/40 border-border/50 focus-visible:ring-primary/50 h-11"
                   required
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -107,6 +111,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-secondary/40 border-border/50 focus-visible:ring-primary/50 h-11"
                   required
+                  autoComplete="current-password"
                 />
               </div>
               
@@ -138,19 +143,6 @@ export default function LoginPage() {
             </CardFooter>
           </form>
         </Card>
-        
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 text-center"
-        >
-          <div className="inline-block p-[1px] rounded-lg bg-gradient-to-r from-border/50 via-border to-border/50">
-            <div className="px-4 py-2 bg-background/50 backdrop-blur-sm rounded-[7px] text-xs font-mono text-muted-foreground flexitems-center gap-2">
-              <span className="text-foreground font-semibold">Demo:</span> admin@portfolio.com <span className="opacity-50">|</span> admin123
-            </div>
-          </div>
-        </motion.div>
       </motion.div>
     </div>
   );

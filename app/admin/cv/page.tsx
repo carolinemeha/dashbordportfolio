@@ -26,14 +26,19 @@ export default function CVPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
-    const cvData = dataService.getCVInfo();
-    setCV(cvData);
+    const fetchData = async () => {
+      const cvData = await dataService.getCVInfo();
+      setCV(cvData);
+    };
+    fetchData();
   }, []);
 
-  const handleUpdate = (updates: Partial<CVInfo>) => {
-    dataService.updateCV(updates as CVInfo);
-    setCV(dataService.getCVInfo());
-    setIsFormOpen(false);
+  const handleUpdate = async (updates: Partial<CVInfo>) => {
+    const updated = await dataService.updateCV(updates as CVInfo);
+    if (updated) {
+      setCV(updated);
+      setIsFormOpen(false);
+    }
   };
 
   const openEditForm = () => {

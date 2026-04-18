@@ -13,46 +13,55 @@ export default function ContactPage() {
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
 
   useEffect(() => {
-    setMessages(dataService.getContactMessages());
+    const fetchData = async () => {
+      const data = await dataService.getContactMessages();
+      setMessages(data || []);
+    };
+    fetchData();
   }, []);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
-      dataService.deleteContactMessage(id);
-      setMessages(dataService.getContactMessages());
-      if (selectedMessage?.id === id) {
-        setSelectedMessage(null);
+      const success = await dataService.deleteContactMessage(id);
+      if (success) {
+        const refreshedData = await dataService.getContactMessages();
+        setMessages(refreshedData);
+        if (selectedMessage?.id === id) {
+          setSelectedMessage(null);
+        }
       }
     }
   };
 
-  const handleMarkAsRead = (id: string) => {
-    dataService.updateContactMessage(id, { status: 'read' });
-    setMessages(dataService.getContactMessages());
-    if (selectedMessage?.id === id) {
-      setSelectedMessage({ ...selectedMessage, status: 'read' });
+  const handleMarkAsRead = async (id: string) => {
+    const updated = await dataService.updateContactMessage(id, { status: 'read' });
+    if (updated) {
+      const refreshedData = await dataService.getContactMessages();
+      setMessages(refreshedData);
+      if (selectedMessage?.id === id) {
+        setSelectedMessage(updated);
+      }
     }
   };
 
   // Trier les messages par date (le plus récent en premier)
   const sortedMessages = [...messages].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return dateB - dateA;
   });
 
   return (
     <div className="space-y-8 h-[calc(100vh-100px)] flex flex-col">
       <div>
         <motion.h1 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
           className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
         >
           Boîte de réception
         </motion.h1>
         <motion.p 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
+          {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
           className="mt-2 text-sm text-muted-foreground"
         >
           Gérez les messages envoyés depuis votre formulaire de contact

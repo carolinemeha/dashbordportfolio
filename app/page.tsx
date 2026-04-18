@@ -95,23 +95,16 @@ export default function Home() {
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="mt-16 pt-16 border-t border-border/30">
-            <div className="inline-block p-1 rounded-2xl bg-gradient-to-r from-primary/30 to-indigo-500/30">
-              <div className="px-6 py-4 bg-background/80 backdrop-blur-xl rounded-xl border border-border/40 min-w-[300px]">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Code de Démo</h3>
-                <div className="flex flex-col gap-2 text-sm">
-                  <div className="flex justify-between items-center px-4 py-2 bg-secondary/50 rounded-lg">
-                    <span className="text-muted-foreground">Email</span>
-                    <span className="font-mono font-medium text-foreground">admin@portfolio.com</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2 bg-secondary/50 rounded-lg">
-                    <span className="text-muted-foreground">Mot de passe</span>
-                    <span className="font-mono font-medium text-foreground">admin123</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <motion.div variants={itemVariants} className="mt-16 pt-16 border-t border-border/30 text-center">
+            <p className="text-sm text-muted-foreground">
+              Accédez au{' '}
+              <Link href="/admin/login" className="text-primary hover:underline font-medium">
+                panneau de connexion
+              </Link>{' '}
+              pour gérer votre portfolio.
+            </p>
           </motion.div>
+
         </motion.div>
       </div>
     </div>

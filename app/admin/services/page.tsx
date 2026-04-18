@@ -7,6 +7,10 @@ import { dataService, Service } from '@/lib/data';
 import { Plus, Edit, Trash2, Settings, Zap, CheckCircle2 } from 'lucide-react';
 import ServiceForm from '@/components/admin/ServiceForm';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import { Cpu, Tag as TagIcon, LayoutGrid } from 'lucide-react';
+import IconRenderer from '@/components/admin/IconRenderer';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -28,26 +32,39 @@ export default function ServicesPage() {
   const [editingService, setEditingService] = useState<Service | null>(null);
 
   useEffect(() => {
-    setServices(dataService.getServices());
+    const fetchData = async () => {
+      const data = await dataService.getServices();
+      setServices(data || []);
+    };
+    fetchData();
   }, []);
 
-  const handleCreate = (serviceData: Omit<Service, 'id'>) => {
-    const newService = dataService.createService(serviceData);
-    setServices(dataService.getServices());
-    setIsFormOpen(false);
+  const handleCreate = async (serviceData: Omit<Service, 'id'>) => {
+    const newService = await dataService.createService(serviceData);
+    if (newService) {
+      const refreshedData = await dataService.getServices();
+      setServices(refreshedData);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleUpdate = (id: string, updates: Partial<Service>) => {
-    dataService.updateService(id, updates);
-    setServices(dataService.getServices());
-    setEditingService(null);
-    setIsFormOpen(false);
+  const handleUpdate = async (id: string, updates: Partial<Service>) => {
+    const updated = await dataService.updateService(id, updates);
+    if (updated) {
+      const refreshedData = await dataService.getServices();
+      setServices(refreshedData);
+      setEditingService(null);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce service ?')) {
-      dataService.deleteService(id);
-      setServices(dataService.getServices());
+      const success = await dataService.deleteService(id);
+      if (success) {
+        const refreshedData = await dataService.getServices();
+        setServices(refreshedData);
+      }
     }
   };
 
@@ -63,7 +80,7 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-40 bg-background/80 backdrop-blur-md pb-4 pt-4 mb-4 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-border/40 shadow-sm">
         <div>
           <motion.h1 
             initial={{ opacity: 0, x: -20 }}
@@ -122,32 +139,39 @@ export default function ServicesPage() {
                   
                   <CardHeader className="pb-4 border-b border-border/20 z-10 relative">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-secondary/50 rounded-lg text-primary border border-border/40 shadow-sm top">
-                          {/* We could use service.icon here if we stored lucide icons names, using a default for now */}
-                          <Zap className="h-5 w-5" />
+                      <div className="flex flex-col gap-4 w-full">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/10 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-inner border border-white/10 text-primary shrink-0">
+                          <IconRenderer iconName={service.iconName} className="h-7 w-7" />
                         </div>
-                        <div>
-                          <CardTitle className="text-xl text-foreground m-0">{service.title}</CardTitle>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <CardTitle className="text-xl font-bold text-foreground m-0">{service.title}</CardTitle>
+                            <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-0.5 shadow-sm">
+                              <Button variant="ghost" size="icon" onClick={() => openEditForm(service)} className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          {service.category && (
+                            <Badge variant="outline" className="text-[10px] uppercase px-1.5 h-4 bg-primary/5 text-primary border-primary/20">
+                              {service.category}
+                            </Badge>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-0.5 shadow-sm">
-                        <Button variant="ghost" size="icon" onClick={() => openEditForm(service)} className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-5 flex-1 flex flex-col z-10 relative">
-                    <CardDescription className="text-sm font-medium text-primary m-0 mb-3 block">{service.shortDescription}</CardDescription>
+                    <CardContent className="pt-5 flex-1 flex flex-col z-10 relative">
                     <p className="text-sm text-foreground/80 leading-relaxed mb-6 flex-1 line-clamp-3">{service.description}</p>
                     
                     {service.features && service.features.length > 0 && (
-                      <div className="mt-auto">
-                        <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">Inclus</h4>
+                      <div className="mb-4">
+                        <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
+                           <CheckCircle2 className="h-3 w-3" /> Fonctionnalités
+                        </h4>
                         <ul className="space-y-2">
                           {service.features.map((feature, index) => (
                             <li key={index} className="flex items-start text-sm text-foreground/70 group/feature">
@@ -156,6 +180,56 @@ export default function ServicesPage() {
                             </li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+
+                    {service.technologies && service.technologies.length > 0 && (
+                      <div className="mb-6">
+                        <h4 className="text-xs uppercase font-bold text-muted-foreground mb-3 flex items-center gap-2">
+                           <Cpu className="h-3 w-3" /> Technologies utilisées
+                        </h4>
+                        <TooltipProvider>
+                          <div className="flex flex-wrap gap-2">
+                            {service.technologies.map((tech, idx) => (
+                              <Tooltip key={idx}>
+                                <TooltipTrigger asChild>
+                                  <div className="w-9 h-9 rounded-xl bg-secondary/40 flex items-center justify-center text-primary border border-border/40 hover:bg-secondary/80 transition-all cursor-help group/tech">
+                                    <IconRenderer iconName={tech.icon} className="h-5 w-5 group-hover/tech:scale-110 transition-transform" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{tech.name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                          </div>
+                        </TooltipProvider>
+                      </div>
+                    )}
+                    
+                    {service.pricing && (Object.keys(service.pricing).length > 0) && (
+                      <div className="mt-auto pt-3 border-t border-border/30">
+                         <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">Tarification</h4>
+                         <div className="flex flex-col gap-1 text-sm">
+                            {service.pricing.basic && (
+                               <div className="flex justify-between items-center bg-secondary/30 px-2 py-1 rounded">
+                                  <span className="text-muted-foreground">Basic</span>
+                                  <span className="font-semibold text-foreground">{service.pricing.basic}</span>
+                               </div>
+                            )}
+                            {service.pricing.standard && (
+                               <div className="flex justify-between items-center bg-secondary/30 px-2 py-1 rounded">
+                                  <span className="text-muted-foreground">Standard</span>
+                                  <span className="font-semibold text-foreground">{service.pricing.standard}</span>
+                               </div>
+                            )}
+                            {service.pricing.premium && (
+                               <div className="flex justify-between items-center bg-secondary/30 px-2 py-1 rounded">
+                                  <span className="text-muted-foreground">Premium</span>
+                                  <span className="font-semibold text-foreground">{service.pricing.premium}</span>
+                               </div>
+                            )}
+                         </div>
                       </div>
                     )}
                   </CardContent>

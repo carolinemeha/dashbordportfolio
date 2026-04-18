@@ -1,5 +1,5 @@
-// Simple authentication system for demo purposes
-// In production, use NextAuth.js or similar
+// Client-side auth utilities (UI only — no secrets here)
+// Real auth is enforced server-side via JWT cookie + middleware
 
 export interface User {
   id: string;
@@ -7,39 +7,22 @@ export interface User {
   name: string;
 }
 
-const ADMIN_CREDENTIALS = {
-  email: 'admin@portfolio.com',
-  password: 'admin123'
-};
-
-export function authenticateUser(email: string, password: string): User | null {
-  if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-    return {
-      id: '1',
-      email: ADMIN_CREDENTIALS.email,
-      name: 'Portfolio Admin'
-    };
+/**
+ * Appelle /api/auth/me pour récupérer l'utilisateur courant depuis le cookie JWT.
+ */
+export async function fetchCurrentUser(): Promise<User | null> {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
   }
-  return null;
 }
 
-export function getStoredUser(): User | null {
-  if (typeof window === 'undefined') return null;
-  
-  const userData = localStorage.getItem('admin_user');
-  return userData ? JSON.parse(userData) : null;
-}
-
-export function storeUser(user: User): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('admin_user', JSON.stringify(user));
-}
-
-export function removeUser(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem('admin_user');
-}
-
-export function isAuthenticated(): boolean {
-  return getStoredUser() !== null;
+/**
+ * Appelle /api/auth/logout pour effacer la session.
+ */
+export async function logout(): Promise<void> {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
 }

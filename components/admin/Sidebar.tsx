@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   FolderOpen, 
@@ -13,9 +13,9 @@ import {
   GraduationCap, 
   MessageSquare, 
   Mail,
-  LogOut
+  LogOut,
+  Award
 } from 'lucide-react';
-import { removeUser } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
@@ -28,20 +28,28 @@ const navigation = [
   { name: 'À propos', href: '/admin/about', icon: User },
   { name: 'CV', href: '/admin/cv', icon: FileText },
   { name: 'Éducation', href: '/admin/education', icon: GraduationCap },
+  { name: 'Certifications', href: '/admin/certifications', icon: Award },
   { name: 'Témoignages', href: '/admin/testimonials', icon: MessageSquare },
   { name: 'Messages', href: '/admin/contact', icon: Mail },
 ];
 
-export default function Sidebar() {
-  const pathname = usePathname();
+interface SidebarProps {
+  onItemClick?: () => void;
+  className?: string;
+}
 
-  const handleLogout = () => {
-    removeUser();
-    window.location.href = '/admin/login';
+export default function Sidebar({ onItemClick, className }: SidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    router.push('/admin/login');
+    router.refresh();
   };
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-20">
+    <div className={className}>
       <div className="flex-1 flex flex-col min-h-0 glass-card rounded-none border-y-0 border-l-0">
         <div className="flex-1 flex flex-col pt-8 pb-4 overflow-y-auto no-scrollbar">
           <div className="flex items-center flex-shrink-0 px-6 mb-6">
@@ -59,6 +67,7 @@ export default function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={onItemClick}
                   className={`group relative flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                     isActive
                       ? 'text-primary'

@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { dataService, AboutInfo } from '@/lib/data';
-import { Edit, User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter, AtSign, Info } from 'lucide-react';
+import { Edit, User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter, AtSign, Info, Briefcase, Languages, ShoppingBag, Youtube } from 'lucide-react';
 import AboutForm from '../../../components/admin/AboutForm';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import { Clock, Activity, FileText } from 'lucide-react';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,14 +28,19 @@ export default function AboutPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
-    const aboutData = dataService.getAboutInfo();
-    setAbout(aboutData);
+    const fetchData = async () => {
+      const aboutData = await dataService.getAboutInfo();
+      setAbout(aboutData);
+    };
+    fetchData();
   }, []);
 
-  const handleUpdate = (updates: Partial<AboutInfo>) => {
-    const updatedAbout = dataService.updateAboutInfo(updates);
-    setAbout(updatedAbout);
-    setIsFormOpen(false);
+  const handleUpdate = async (updates: Partial<AboutInfo>) => {
+    const updatedAbout = await dataService.updateAboutInfo(updates);
+    if (updatedAbout) {
+      setAbout(updatedAbout);
+      setIsFormOpen(false);
+    }
   };
 
   const openEditForm = () => {
@@ -49,22 +56,19 @@ export default function AboutPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
             className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
           >
             À propos de moi
           </motion.h1>
           <motion.p 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
             className="mt-2 text-sm text-muted-foreground"
           >
             Gérez vos informations personnelles et vos coordonnées
           </motion.p>
         </div>
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
           <Button onClick={openEditForm} className="shadow-lg hover:shadow-primary/25 transition-all">
             <Edit className="h-4 w-4 mr-2" />
             {about ? 'Modifier le profil' : 'Créer mon profil'}
@@ -110,6 +114,16 @@ export default function AboutPage() {
                 <h2 className="text-2xl font-bold text-foreground">{about.name}</h2>
                 <p className="text-primary font-medium mt-1">{about.title}</p>
                 
+                {about.roles && about.roles.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 justify-center mt-3 px-4">
+                    {about.roles.map((role, idx) => (
+                      <Badge key={idx} variant="secondary" className="bg-primary/5 text-primary border-primary/20 text-[10px] py-0 px-2">
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
                 <div className="w-full h-px bg-border/40 my-6"></div>
                 
                 <div className="w-full space-y-4 text-left">
@@ -117,21 +131,92 @@ export default function AboutPage() {
                     <div className="p-2 bg-secondary rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                       <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <p className="text-sm font-medium text-foreground/80 truncate">{about.email}</p>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Email</p>
+                      <p className="text-sm font-medium text-foreground/80 truncate">{about.email}</p>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-3 group">
                     <div className="p-2 bg-secondary rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                       <Phone className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <p className="text-sm font-medium text-foreground/80">{about.phone}</p>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Téléphone</p>
+                      <p className="text-sm font-medium text-foreground/80">{about.phone}</p>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-3 group">
                     <div className="p-2 bg-secondary rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                       <MapPin className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <p className="text-sm font-medium text-foreground/80">{about.location}</p>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Localisation</p>
+                      <p className="text-sm font-medium text-foreground/80">{about.location}</p>
+                    </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Informations additionnelles */}
+            <Card className="glass-card">
+              <CardHeader className="pb-3 border-b border-border/30 bg-secondary/10">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Info className="h-4 w-4 text-primary" />
+                  Informations clés
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 grid grid-cols-1 gap-4">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                  <div className="flex items-center space-x-3">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Expérience</span>
+                  </div>
+                  <span className="text-sm font-semibold">{about.experience || "-"}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Nationalité</span>
+                  </div>
+                  <span className="text-sm font-semibold">{about.nationality || "-"}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                  <div className="flex items-center space-x-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Freelance</span>
+                  </div>
+                  <span className="text-sm font-semibold">{about.freelanceStatus || "-"}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                  <div className="flex items-center space-x-3">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Timezone</span>
+                  </div>
+                  <span className="text-sm font-semibold">{about.timezone || "-"}</span>
+                </div>
+                <div className="p-2 rounded-lg bg-secondary/30">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Disponibilité</span>
+                  </div>
+                  <p className="text-sm font-semibold pl-7">{about.availableStatus || "-"}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-secondary/30">
+                  <div className="flex items-center space-x-3 mb-1">
+                    <Languages className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Langues</span>
+                  </div>
+                  <p className="text-sm font-semibold pl-7">{about.languages || "-"}</p>
+                </div>
+                {about.cvUrl && (
+                  <Button variant="outline" size="sm" className="w-full mt-2 border-primary/20 hover:bg-primary/5 group" asChild>
+                    <a href={about.cvUrl} target="_blank" rel="noopener noreferrer">
+                      <FileText className="h-4 w-4 mr-2 text-primary" />
+                      Télécharger mon CV
+                    </a>
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -143,12 +228,20 @@ export default function AboutPage() {
                   Présence en ligne
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4 space-y-3">
+              <CardContent className="pt-4 space-y-1">
                 {about.website && (
                   <a href={about.website} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
                     <div className="flex items-center space-x-3">
                       <Globe className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       <span className="text-sm font-medium text-foreground/80">Site Intenet</span>
+                    </div>
+                  </a>
+                )}
+                {about.shopUrl && (
+                  <a href={about.shopUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                    <div className="flex items-center space-x-3">
+                      <ShoppingBag className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-sm font-medium text-foreground/80">Boutique en ligne</span>
                     </div>
                   </a>
                 )}
@@ -176,7 +269,15 @@ export default function AboutPage() {
                     </div>
                   </a>
                 )}
-                {(!about.website && !about.github && !about.linkedin && !about.twitter) && (
+                {about.youtube && (
+                  <a href={about.youtube} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                    <div className="flex items-center space-x-3">
+                      <Youtube className="h-5 w-5 text-muted-foreground group-hover:text-[#FF0000] transition-colors" />
+                      <span className="text-sm font-medium text-foreground/80">YouTube</span>
+                    </div>
+                  </a>
+                )}
+                {(!about.website && !about.github && !about.linkedin && !about.twitter && !about.youtube && !about.shopUrl) && (
                   <p className="text-sm text-muted-foreground italic">Aucun lien renseigné.</p>
                 )}
               </CardContent>

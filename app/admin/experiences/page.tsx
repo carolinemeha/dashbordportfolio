@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { dataService, Experience } from '@/lib/data';
-import { Plus, Edit, Trash2, Briefcase, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Briefcase, Calendar, CheckCircle2 } from 'lucide-react';
 import ExperienceForm from '@/components/admin/ExperienceForm';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,26 +29,39 @@ export default function ExperiencesPage() {
   const [editingExperience, setEditingExperience] = useState<Experience | null>(null);
 
   useEffect(() => {
-    setExperiences(dataService.getExperiences());
+    const fetchData = async () => {
+      const data = await dataService.getExperiences();
+      setExperiences(data || []);
+    };
+    fetchData();
   }, []);
 
-  const handleCreate = (experienceData: Omit<Experience, 'id'>) => {
-    const newExperience = dataService.createExperience(experienceData);
-    setExperiences(dataService.getExperiences());
-    setIsFormOpen(false);
+  const handleCreate = async (experienceData: Omit<Experience, 'id'>) => {
+    const newExperience = await dataService.createExperience(experienceData);
+    if (newExperience) {
+      const refreshedData = await dataService.getExperiences();
+      setExperiences(refreshedData);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleUpdate = (id: string, updates: Partial<Experience>) => {
-    dataService.updateExperience(id, updates);
-    setExperiences(dataService.getExperiences());
-    setEditingExperience(null);
-    setIsFormOpen(false);
+  const handleUpdate = async (id: string, updates: Partial<Experience>) => {
+    const updated = await dataService.updateExperience(id, updates);
+    if (updated) {
+      const refreshedData = await dataService.getExperiences();
+      setExperiences(refreshedData);
+      setEditingExperience(null);
+      setIsFormOpen(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette expérience ?')) {
-      dataService.deleteExperience(id);
-      setExperiences(dataService.getExperiences());
+      const success = await dataService.deleteExperience(id);
+      if (success) {
+        const refreshedData = await dataService.getExperiences();
+        setExperiences(refreshedData);
+      }
     }
   };
 
@@ -67,22 +80,19 @@ export default function ExperiencesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
             className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
           >
             Expériences
           </motion.h1>
           <motion.p 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
+            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
             className="mt-2 text-sm text-muted-foreground"
           >
             Gérez la chronologie de votre parcours professionnel
           </motion.p>
         </div>
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
           <Button onClick={() => setIsFormOpen(true)} className="shadow-lg hover:shadow-primary/25 transition-all">
             <Plus className="h-4 w-4 mr-2" />
             Nouvelle expérience
@@ -127,7 +137,7 @@ export default function ExperiencesPage() {
                     <CardHeader className="pb-3 bg-secondary/10 border-b border-border/30">
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle className="text-lg text-foreground">{experience.title}</CardTitle>
+                          <CardTitle className="text-lg text-foreground">{experience.position}</CardTitle>
                           <CardDescription className="font-medium text-primary/80 mt-1">{experience.company}</CardDescription>
                         </div>
                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border/50 rounded-lg p-0.5 shadow-sm">
@@ -143,11 +153,20 @@ export default function ExperiencesPage() {
                     <CardContent className="pt-4 space-y-4">
                       <div className="flex items-center text-xs font-medium text-muted-foreground bg-secondary/40 w-fit px-2.5 py-1 rounded-md border border-border/30">
                         <Calendar className="h-3.5 w-3.5 mr-1.5 opacity-70" />
-                        <span>{experience.startDate}</span>
-                        <span className="mx-2 opacity-50">-</span>
-                        <span className={!experience.endDate ? 'text-primary font-semibold' : ''}>{experience.endDate || 'Présent'}</span>
+                        <span>{experience.duration}</span>
                       </div>
-                      <p className="text-sm text-foreground/80 leading-relaxed text-pretty">{experience.description}</p>
+                      <div className="text-sm text-foreground/80 space-y-1 mt-2">
+                         {experience.achievements && experience.achievements.length > 0 ? (
+                           experience.achievements.map((ach, idx) => (
+                             <div key={idx} className="flex items-start gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                <span>{ach}</span>
+                             </div>
+                           ))
+                         ) : (
+                           <p className="italic text-muted-foreground">Aucun détail fourni.</p>
+                         )}
+                      </div>
                       
                       {experience.skills && experience.skills.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/30">

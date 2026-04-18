@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Experience } from '@/lib/data';
-import { Briefcase, Building, MapPin, Calendar } from 'lucide-react';
+import { Briefcase, Building, MapPin, Calendar, Target, Settings2, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExperienceFormProps {
   experience?: Experience | null;
@@ -18,18 +18,54 @@ interface ExperienceFormProps {
 
 export default function ExperienceForm({ experience, onSave, onCancel }: ExperienceFormProps) {
   const [formData, setFormData] = useState({
-    title: experience?.title || '',
+    position: experience?.position || '',
     company: experience?.company || '',
-    startDate: experience?.startDate || '',
-    endDate: experience?.endDate || '',
-    current: !experience?.endDate && !!experience?.startDate, // Basic logic for current
-    description: experience?.description || '',
-    location: experience?.location || ''
+    location: experience?.location || '',
+    duration: experience?.duration || '',
+    achievements: experience?.achievements || [],
+    skills: experience?.skills || []
   });
+
+  const [newAchievement, setNewAchievement] = useState('');
+  const [newSkill, setNewSkill] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData as any);
+    onSave(formData as Omit<Experience, 'id'>);
+  };
+
+  const addAchievement = () => {
+    if (newAchievement.trim() && !formData.achievements.includes(newAchievement.trim())) {
+      setFormData({
+        ...formData,
+        achievements: [...formData.achievements, newAchievement.trim()]
+      });
+      setNewAchievement('');
+    }
+  };
+
+  const removeAchievement = (ach: string) => {
+    setFormData({
+      ...formData,
+      achievements: formData.achievements.filter(a => a !== ach)
+    });
+  };
+
+  const addSkill = () => {
+    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
+      setFormData({
+        ...formData,
+        skills: [...formData.skills, newSkill.trim()]
+      });
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (skill: string) => {
+    setFormData({
+      ...formData,
+      skills: formData.skills.filter(s => s !== skill)
+    });
   };
 
   return (
@@ -48,11 +84,11 @@ export default function ExperienceForm({ experience, onSave, onCancel }: Experie
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-foreground">Poste <span className="text-destructive">*</span></Label>
+              <Label htmlFor="position" className="text-foreground">Poste <span className="text-destructive">*</span></Label>
               <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                id="position"
+                value={formData.position}
+                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
                 placeholder="Ex: Développeur Full Stack"
                 required
@@ -73,73 +109,116 @@ export default function ExperienceForm({ experience, onSave, onCancel }: Experie
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location" className="text-foreground flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" /> Lieu
-            </Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-              placeholder="Paris, France"
-            />
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="startDate" className="text-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" /> Date de début <span className="text-destructive">*</span>
+              <Label htmlFor="duration" className="text-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" /> Durée <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="startDate"
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                id="duration"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
+                placeholder="Ex: 2024 - Présent"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate" className="text-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" /> Date de fin
+              <Label htmlFor="location" className="text-foreground flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" /> Lieu
               </Label>
               <Input
-                id="endDate"
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                id="location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                disabled={formData.current}
+                placeholder="Ex: Paris, France"
               />
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
-            <Switch
-              id="current"
-              checked={formData.current}
-              onCheckedChange={(checked) => setFormData({ 
-                ...formData, 
-                current: checked,
-                endDate: checked ? '' : formData.endDate
-              })}
-              className="data-[state=checked]:bg-primary"
-            />
-            <Label htmlFor="current" className="text-foreground cursor-pointer font-medium">J'occupe actuellement ce poste</Label>
+          {/* Achievements */}
+          <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
+            <Label className="text-foreground flex items-center gap-2">
+              <Target className="h-4 w-4 text-muted-foreground" /> Accomplissements & Missions
+            </Label>
+            <div className="flex space-x-2">
+              <Input
+                value={newAchievement}
+                onChange={(e) => setNewAchievement(e.target.value)}
+                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 flex-1"
+                placeholder="Appuyez sur Entrée pour ajouter (ex: Refonte du site vitrine...)"
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAchievement())}
+              />
+              <Button type="button" variant="secondary" onClick={addAchievement}>
+                Ajouter
+              </Button>
+            </div>
+            <div className="flex flex-col gap-2 pt-2 min-h-[32px]">
+              <AnimatePresence>
+                {formData.achievements.map((ach) => (
+                  <motion.div
+                    key={ach}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex justify-between items-center bg-background/50 border border-border/40 p-2 rounded-md text-sm"
+                  >
+                    <span>{ach}</span>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeAchievement(ach)}>
+                       <X className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                ))}
+                {formData.achievements.length === 0 && (
+                  <span className="text-sm text-muted-foreground italic flex items-center">Aucun accomplissement ajouté.</span>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-foreground">Description <span className="text-destructive">*</span></Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y min-h-[100px]"
-              placeholder="Décrivez vos responsabilités et réalisations..."
-              required
-            />
+          {/* Skills */}
+          <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
+            <Label className="text-foreground flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-muted-foreground" /> Compétences utilisées
+            </Label>
+            <div className="flex space-x-2">
+              <Input
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 flex-1"
+                placeholder="Appuyez sur Entrée pour ajouter..."
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+              />
+              <Button type="button" variant="secondary" onClick={addSkill}>
+                Ajouter
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-2 min-h-[32px]">
+              <AnimatePresence>
+                {formData.skills.map((skill) => (
+                  <motion.div
+                    key={skill}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <Badge variant="default" className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
+                      {skill}
+                      <X
+                        className="h-3.5 w-3.5 cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
+                        onClick={() => removeSkill(skill)}
+                      />
+                    </Badge>
+                  </motion.div>
+                ))}
+                {formData.skills.length === 0 && (
+                  <span className="text-sm text-muted-foreground italic flex items-center">Aucune compétence ajoutée.</span>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           <DialogFooter className="pt-4 border-t border-border/40 sm:justify-end">
