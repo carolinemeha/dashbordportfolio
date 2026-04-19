@@ -1,0 +1,292 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "copy": "Copy",
+    "pathCopied": "Path copied.",
+    "administration": "Administration",
+    "adminPanelHint": "Portfolio configuration panel."
+  },
+  "locale": {
+    "label": "Interface language",
+    "description": "Same approach as the public site (French / English). Admin labels follow your choice; database content (projects, etc.) stays as you enter it.",
+    "fr": "French",
+    "en": "English",
+    "shortFr": "FR",
+    "shortEn": "EN"
+  },
+  "nav": {
+    "dashboard": {
+      "name": "Dashboard",
+      "heading": "Overview",
+      "description": "Content stats, recent activity and indicators."
+    },
+    "projects": {
+      "name": "Projects",
+      "heading": "Portfolio projects",
+      "description": "Manage and showcase your work."
+    },
+    "experiences": {
+      "name": "Experience",
+      "heading": "Work experience",
+      "description": "Timeline of your career and roles."
+    },
+    "skills": {
+      "name": "Skills",
+      "heading": "Skills",
+      "description": "Technical skills and tools inventory."
+    },
+    "services": {
+      "name": "Services",
+      "heading": "Services",
+      "description": "Offers and services shown on the site."
+    },
+    "about": {
+      "name": "Profile & home",
+      "heading": "Profile & home",
+      "description": "Bio, photo, showcase and links."
+    },
+    "cv": {
+      "name": "CV",
+      "heading": "Curriculum Vitae",
+      "description": "Downloadable CV file and metadata."
+    },
+    "education": {
+      "name": "Education",
+      "heading": "Education",
+      "description": "Degrees, training and academic path."
+    },
+    "certifications": {
+      "name": "Certifications",
+      "heading": "Certifications",
+      "description": "Degrees, certifications and professional recognition."
+    },
+    "testimonials": {
+      "name": "Testimonials",
+      "heading": "Client testimonials",
+      "description": "Quotes and recommendations shown on the portfolio."
+    },
+    "contact": {
+      "name": "Messages",
+      "heading": "Contact form",
+      "description": "Inbound requests (details, service, budget, message) as on the site."
+    },
+    "settings": {
+      "name": "Settings",
+      "heading": "Settings",
+      "description": "Language, appearance, sidebar and account."
+    }
+  },
+  "header": {
+    "openMenu": "Open menu",
+    "logout": "Log out",
+    "copyPathTitle": "Copy path"
+  },
+  "sidebar": {
+    "contentSection": "Site content",
+    "logout": "Log out",
+    "mobileMenuTitle": "Navigation menu"
+  },
+  "auth": {
+    "checking": "Checking session…"
+  },
+  "login": {
+    "title": "Secure area",
+    "subtitle": "Sign in to access the admin",
+    "cardTitle": "Authentication required",
+    "cardDescription": "Enter your administrator credentials.",
+    "email": "Email address",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitLoading": "Signing in…",
+    "errorCredentials": "Incorrect email or password",
+    "errorGeneric": "Something went wrong while signing in",
+    "footerHint": "Restricted access. Unauthorized attempts may be logged."
+  },
+  "theme": {
+    "toLight": "Switch to light theme",
+    "toDark": "Switch to dark theme",
+    "toggle": "Toggle theme"
+  },
+  "dashboard": {
+    "stats": {
+      "projects": "Projects",
+      "projectsDesc": "Portfolio projects",
+      "experiences": "Experience",
+      "experiencesDesc": "Professional experience",
+      "skills": "Skills",
+      "skillsDesc": "Technical skills",
+      "services": "Services",
+      "servicesDesc": "Services offered",
+      "education": "Education",
+      "educationDesc": "Training and degrees",
+      "testimonials": "Testimonials",
+      "testimonialsDesc": "Client reviews",
+      "messages": "Messages",
+      "messagesNew": "{count} new"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "description": "Latest changes",
+      "empty": "No recent activity.",
+      "typeProject": "Latest project",
+      "typeSkill": "Skill",
+      "typeMessage": "Contact message",
+      "typeExperience": "Experience",
+      "typeEducation": "Education",
+      "typeTestimonial": "Testimonial",
+      "typeService": "Service",
+      "noSubject": "(no subject)"
+    },
+    "performance": {
+      "title": "Performance",
+      "description": "Supabase analytics (7-day window + totals)",
+      "viewsWeek": "Views (last 7 days)",
+      "viewsTotal": "Total: {count}",
+      "cvWeek": "CV downloads (7d)",
+      "cvTotal": "Total: {count}",
+      "visitorsWeek": "Unique visitors (7d)",
+      "visitorsTotal": "Distinct total: {count}",
+      "ipHashHint": "ip_hash"
+    }
+  },
+  "settings": {
+    "appearance": {
+      "title": "Appearance",
+      "description": "Interface theme (synced with the header control).",
+      "light": "Light",
+      "lightDesc": "Light background, soft contrast",
+      "dark": "Dark",
+      "darkDesc": "Best in low light",
+      "system": "System",
+      "systemDesc": "Follow device settings"
+    },
+    "sidebar": {
+      "title": "Sidebar",
+      "description": "Logo, text under the visual and labels: stored locally and in Supabase.",
+      "logoLabel": "Logo (sidebar)",
+      "line1": "Top line (small caps)",
+      "line2": "Main title",
+      "saveLabels": "Save labels",
+      "resetLabels": "Reset",
+      "toastLabelsSaved": "Sidebar labels saved.",
+      "toastLabelsReset": "Labels reset.",
+      "logoUploaded": "Logo uploaded. It appears in the sidebar."
+    },
+    "navigation": {
+      "title": "Navigation",
+      "description": "Page opened automatically after a successful sign-in on this device.",
+      "landingLabel": "Home page after login",
+      "placeholder": "Choose a page",
+      "toastLanding": "Post-login page updated."
+    },
+    "interface": {
+      "title": "Interface",
+      "description": "Console display options (this browser only).",
+      "sidebarCompact": "Compact sidebar",
+      "sidebarCompactDesc": "On large screens: icons only, tooltips on hover.",
+      "compactOn": "Compact mode on.",
+      "compactOff": "Compact mode off.",
+      "reduceMotion": "Reduce motion",
+      "reduceMotionDesc": "Shortens transitions and animations in the admin.",
+      "motionOn": "Reduced motion.",
+      "motionOff": "Full motion restored."
+    },
+    "layout": {
+      "title": "Content layout",
+      "description": "Main panel margins (in addition to compact sidebar).",
+      "density": "Density",
+      "comfortable": "Comfortable",
+      "compact": "Compact",
+      "toastComfortable": "Comfortable margins.",
+      "toastCompact": "Tighter margins."
+    },
+    "banner": {
+      "title": "Banner & header",
+      "description": "Text shown under the toolbar on all pages, and header options.",
+      "bannerLabel": "Banner message (optional)",
+      "bannerPlaceholder": "E.g. Maintenance Sunday 10–11 pm.",
+      "chars": "{n}/200",
+      "headerMinimal": "Minimal header",
+      "headerMinimalDesc": "Hides the long description under the title (keeps title and actions).",
+      "minimalOn": "Minimal header on.",
+      "minimalOff": "Description restored.",
+      "routeCrumb": "Route trail",
+      "routeCrumbDesc": "Shows the page path with one-click copy.",
+      "routeOn": "Path shown.",
+      "routeOff": "Path hidden."
+    },
+    "dashboardPrefs": {
+      "title": "Dashboard",
+      "description": "Activity date display and stat refresh.",
+      "dateStyle": "Date style (recent activity)",
+      "relative": "Relative (2 hours ago)",
+      "absolute": "Absolute (Apr 19, 2026, 2:30 pm)",
+      "toastRelative": "Relative dates.",
+      "toastAbsolute": "Absolute dates.",
+      "autoRefresh": "Auto-refresh",
+      "autoRefreshDesc": "Reloads dashboard stats about every 45 seconds while the tab is open.",
+      "autoOn": "Auto-refresh on.",
+      "autoOff": "Auto-refresh off."
+    },
+    "health": {
+      "title": "Supabase diagnostics",
+      "description": "Checks public env vars and a simple read on the about table. No secrets are returned to the browser.",
+      "run": "Run diagnostics",
+      "ok": "Supabase connection OK.",
+      "done": "Diagnostics complete — see details below.",
+      "error": "Could not reach the diagnostics endpoint."
+    },
+    "publicSite": {
+      "title": "Public site",
+      "description": "Optional shortcut to open your public portfolio from the console.",
+      "urlLabel": "Portfolio URL",
+      "saveUrl": "Save URL",
+      "openNew": "Open in new tab",
+      "placeholder": "https://example.com",
+      "toastUrlSaved": "Public site shortcut saved."
+    },
+    "backup": {
+      "title": "Local backup",
+      "description": "Export or import a JSON preferences file (same or another machine).",
+      "export": "Export JSON",
+      "import": "Import JSON",
+      "resetAll": "Reset everything",
+      "resetTitle": "Reset all preferences?",
+      "resetDescription": "Resets local settings (theme unchanged), sidebar, post-login navigation and shortcuts to defaults on this device. Does not delete any site data.",
+      "confirm": "Reset",
+      "toastExported": "Preferences exported.",
+      "toastImported": "Preferences imported.",
+      "toastResetLocal": "All local preferences have been reset."
+    },
+    "sync": {
+      "title": "Supabase sync",
+      "description": "Settings are stored locally and copied to admin_console_settings (columns + preferences_extra JSON). Reloaded on startup if the row exists.",
+      "pull": "Load from cloud",
+      "push": "Push now",
+      "toastPullOk": "Preferences loaded from Supabase.",
+      "toastPullEmpty": "No admin_console_settings row — save once to create it.",
+      "toastPushOk": "Preferences saved to Supabase.",
+      "toastPushErr": "Save failed (see console)."
+    },
+    "profile": {
+      "title": "Console profile",
+      "description": "Identity from the “Profile & home” record (about table) and your session.",
+      "displayName": "Display name",
+      "jobTitle": "Job title",
+      "emailPublic": "Public email",
+      "emailLogin": "Login email",
+      "phone": "Phone",
+      "location": "Location",
+      "role": "Role",
+      "editPublic": "Edit public profile",
+      "loading": "Loading profile…"
+    }
+  }
+}

@@ -1,4 +1,40 @@
 import { supabase } from './supabase';
+import {
+  normalizeAdminPreferences,
+  type AdminPreferencesV1,
+} from './admin-preferences';
+
+/** Ligne unique des préférences console (à créer en base si absente). */
+const ADMIN_CONSOLE_SETTINGS_ID = '00000000-0000-0000-0000-000000000002';
+
+function preferencesExtraFromPrefs(prefs: AdminPreferencesV1): Record<string, unknown> {
+  return {
+    density: prefs.density,
+    headerBanner: prefs.headerBanner,
+    showRouteCrumb: prefs.showRouteCrumb,
+    headerMinimal: prefs.headerMinimal,
+    dashboardDateStyle: prefs.dashboardDateStyle,
+    dashboardAutoRefresh: prefs.dashboardAutoRefresh,
+    locale: prefs.locale,
+  };
+}
+
+function parsePreferencesExtra(raw: unknown): Partial<AdminPreferencesV1> {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const e = raw as Record<string, unknown>;
+  const out: Partial<AdminPreferencesV1> = {};
+  if (e.density === 'compact' || e.density === 'comfortable')
+    out.density = e.density;
+  if (typeof e.headerBanner === 'string') out.headerBanner = e.headerBanner;
+  if (typeof e.showRouteCrumb === 'boolean') out.showRouteCrumb = e.showRouteCrumb;
+  if (typeof e.headerMinimal === 'boolean') out.headerMinimal = e.headerMinimal;
+  if (e.dashboardDateStyle === 'absolute' || e.dashboardDateStyle === 'relative')
+    out.dashboardDateStyle = e.dashboardDateStyle;
+  if (typeof e.dashboardAutoRefresh === 'boolean')
+    out.dashboardAutoRefresh = e.dashboardAutoRefresh;
+  if (e.locale === 'fr' || e.locale === 'en') out.locale = e.locale;
+  return out;
+}
 
 // Mock data store for demo purposes
 // In production, replace with actual database operations
@@ -11,10 +47,44 @@ export interface Project {
   demo?: string;
   github?: string;
   technologies: string[];
+  /** Slugs alignés sur la page Work : frontend | fullstack | ui-ux | design | logo */
   category: string;
+  /** completed | in-progress | planned — mêmes valeurs que le filtre du front */
   status: string;
   date: string;
   featured?: boolean;
+}
+
+function projectInsertPayload(project: Omit<Project, 'id'>) {
+  const demo = project.demo?.trim() || null;
+  const github = project.github?.trim() || null;
+  return {
+    title: project.title,
+    description: project.description,
+    image: project.image?.trim() || null,
+    demo_url: demo,
+    github_url: github,
+    technologies: project.technologies,
+    category: project.category,
+    status: project.status,
+    date: project.date,
+    featured: project.featured ?? false,
+  };
+}
+
+function projectUpdatePayload(updates: Partial<Project>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (updates.title !== undefined) out.title = updates.title;
+  if (updates.description !== undefined) out.description = updates.description;
+  if (updates.image !== undefined) out.image = updates.image?.trim() || null;
+  if (updates.demo !== undefined) out.demo_url = updates.demo?.trim() || null;
+  if (updates.github !== undefined) out.github_url = updates.github?.trim() || null;
+  if (updates.technologies !== undefined) out.technologies = updates.technologies;
+  if (updates.category !== undefined) out.category = updates.category;
+  if (updates.status !== undefined) out.status = updates.status;
+  if (updates.date !== undefined) out.date = updates.date;
+  if (updates.featured !== undefined) out.featured = updates.featured;
+  return out;
 }
 
 export interface Experience {
@@ -30,8 +100,42 @@ export interface Experience {
 export interface Skill {
   id: string;
   name: string;
-  level: number; // 0-100%
+  /** Conservé en base pour compatibilité ; plus affiché dans l’admin. */
+  level: number;
   category: 'Frontend' | 'Backend' | 'Mobile' | 'Design' | 'Commerce' | 'Autres';
+  /** Nom d’export react-icons (ex. FaHtml5, SiNextdotjs) — voir `lib/skill-icons.tsx`. */
+  iconName?: string;
+}
+
+function mapSkillFromRow(row: Record<string, unknown>): Skill {
+  const cat = row.category as string | undefined;
+  const valid: Skill['category'][] = [
+    'Frontend',
+    'Backend',
+    'Mobile',
+    'Design',
+    'Commerce',
+    'Autres',
+  ];
+  return {
+    id: String(row.id),
+    name: String(row.name ?? ''),
+    level: typeof row.level === 'number' ? row.level : 0,
+    category: (cat && valid.includes(cat as Skill['category'])
+      ? cat
+      : 'Frontend') as Skill['category'],
+    iconName:
+      typeof row.icon_name === 'string' && row.icon_name ? row.icon_name : '',
+  };
+}
+
+function skillToDbPayload(skill: Partial<Skill>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (skill.name !== undefined) out.name = skill.name;
+  if (skill.level !== undefined) out.level = skill.level;
+  if (skill.category !== undefined) out.category = skill.category;
+  if (skill.iconName !== undefined) out.icon_name = skill.iconName?.trim() || null;
+  return out;
 }
 
 export interface Service {
@@ -80,6 +184,18 @@ export interface AboutInfo {
   twitter?: string;
   youtube?: string;
   cvUrl?: string;
+  /** Pastille au-dessus du titre (page d’accueil vitrine) */
+  heroBadge?: string;
+  /** Ligne « Disponible » sur l’accueil */
+  homeAvailableTitle?: string;
+  /** Sous-ligne sous la disponibilité */
+  homeAvailableSubtitle?: string;
+  homeStatYears?: number;
+  homeStatProjects?: number;
+  homeStatClients?: number;
+  homeStatSatisfaction?: number;
+  whatsappUrl?: string;
+  telegramUrl?: string;
 }
 
 export interface Education {
@@ -100,14 +216,71 @@ export interface Testimonial {
   date?: string;
 }
 
+/**
+ * Évite les 404 : un src comme "caleb.jpg" est résolu en /admin/caleb.jpg depuis l’admin.
+ * On ne garde que les URLs absolues, data: ou chemins absolus sous / (hors anciens /assets/testi/).
+ */
+export function normalizeTestimonialAvatarUrl(avatar: string | null | undefined): string {
+  if (avatar == null) return '';
+  const t = String(avatar).trim();
+  if (!t) return '';
+  const lower = t.toLowerCase();
+  if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('//')) return t;
+  if (lower.startsWith('data:')) return t;
+  if (t.startsWith('/')) {
+    if (/^\/assets\/testi\//i.test(t)) return '';
+    return t;
+  }
+  return '';
+}
+
 export interface ContactMessage {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
+  phone?: string;
+  service?: string;
+  budget?: string;
+  locale?: string;
   subject: string;
   message: string;
   status: 'new' | 'read' | 'replied';
   createdAt: string;
+}
+
+function mapContactRow(row: Record<string, unknown>): ContactMessage {
+  const st = row.status;
+  const status: ContactMessage['status'] =
+    st === 'read' || st === 'replied' ? st : 'new';
+  return {
+    id: String(row.id ?? ''),
+    name: String(row.name ?? ''),
+    firstName:
+      row.first_name != null && row.first_name !== ''
+        ? String(row.first_name)
+        : undefined,
+    lastName:
+      row.last_name != null && row.last_name !== ''
+        ? String(row.last_name)
+        : undefined,
+    email: String(row.email ?? ''),
+    phone:
+      row.phone != null && row.phone !== '' ? String(row.phone) : undefined,
+    service:
+      row.service != null && row.service !== ''
+        ? String(row.service)
+        : undefined,
+    budget:
+      row.budget != null && row.budget !== '' ? String(row.budget) : undefined,
+    locale:
+      row.locale != null && row.locale !== '' ? String(row.locale) : undefined,
+    subject: String(row.subject ?? ''),
+    message: String(row.message ?? ''),
+    status,
+    createdAt: String(row.created_at ?? ''),
+  };
 }
 
 export interface CVInfo {
@@ -119,16 +292,21 @@ export interface CVInfo {
 
 export interface ActivityEntry {
   id: string;
-  type: 'project' | 'skill' | 'message';
-  title: string;
+  type: 'project' | 'skill' | 'message' | 'experience' | 'education' | 'testimonial' | 'service';
+  /** Donnée brute ; le libellé de ligne est traduit côté UI selon `type`. */
   subtitle: string;
   date: string;
 }
 
 export interface DashboardStats {
+  /** Vues enregistrées (toutes périodes) */
   totalViews: number;
+  /** Vues sur les 7 derniers jours */
+  viewsThisWeek: number;
   uniqueVisitors: number;
+  uniqueVisitorsThisWeek: number;
   cvDownloads: number;
+  cvDownloadsThisWeek: number;
   recentActivity: ActivityEntry[];
 }
 
@@ -156,9 +334,9 @@ export let projects: Project[] = [
   { id: '20', title: "Application web", description: "Application web d'envoie de colis entre partenaires et clients.", image: "/assets/work/kemasan.png", category: "fullstack", technologies: ["Reactjs", "TailwindCss", "Nodejs", "Postgresql"], github: "", demo: "", status: "in-progress", date: "2025-07" },
   { id: '21', title: "Application web", description: "Site e-commerce multivendeur.", image: "/assets/work/ahi-mobile.png", category: "fullstack", technologies: ["NextJs", "TailwindCss", "Nodejs", "Firibase"], github: "", demo: "https://ahi.market", status: "in-progress", date: "2025-07" },
   { id: "22", title: "Africa Digital Bridge", description: "Plateforme web pour offre d'emploi et recrutement.", image: "/assets/work/digtalbridge.png", category: "fullstack", technologies: ["React", "vite", "supabase", "PostgreSQL", "TailwindCss"], github: "", demo: "https://africadigitalbridge.com/", status: "completed", date: "2026-02" },
-  { id: "23", title: "Espace Snif", description: "Portail Espace SNIF.", image: "/assets/work/esnif.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://espacesnif.iwajutech.com/", status: "completed", date: "2026-02" },
-  { id: "24", title: "Appel d'offre", description: "Parcours du module AO au sein de l’application .", image: "/assets/work/ao.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://espacesnif.iwajutech.com/", status: "completed", date: "2025-11" },
-  { id: "25", title: "ESP Snif", description: "Vues Espace Snif .", image: "/assets/work/espsnif.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://espacesnif.iwajutech.com/", status: "completed", date: "2026-02" },
+  { id: "23", title: "Espace Snif", description: "Système d'Information Géographique des Services Financiers du Bénin.", image: "/assets/work/esnif.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://espacesnif.iwajutech.com/", status: "completed", date: "2026-02" },
+  { id: "24", title: "Appel d'offre", description: "Gestion des marchés publics et des appels d'offre.", image: "/assets/work/ao.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://appelsoffre.iwajutech.com/", status: "completed", date: "2025-11" },
+  { id: "25", title: "ESP Snif", description: "Système d'Information Géographique des Services Financiers du Bénin .", image: "/assets/work/espsnif.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://espacesnif.iwajutech.com/", status: "completed", date: "2026-02" },
   { id: "26", title: "Générateur de mot de passe", description: "Outil pour générer des mots de passe sécurisés.", image: "/assets/work/motdepasse.png", category: "ui-ux", technologies: ["React", "Tailwind CSS", "vite"], github: "", demo: "https://generateurmotdepasse.iwajutech.com/", status: "completed", date: "2026-03" },
   { id: "27", title: "Snif", description: "Écrans Snif liés à l’écosystème Espace SNIF.", image: "/assets/work/snif.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://espacesnif.iwajutech.com/", status: "completed", date: "2026-02" },
   { id: "28", title: "SP Snif", description: "Interface  Espace Snif pour la supervision ou les opérations.", image: "/assets/work/spsnif.png", category: "frontend", technologies: ["Angular", "CSS", "HTML"], github: "", demo: "https://espacesnif.iwajutech.com/", status: "completed", date: "2026-02" },
@@ -379,13 +557,22 @@ export let aboutInfo: AboutInfo = {
   languages: "Fon, Français, Anglais",
   github: "https://github.com/carolinemeha",
   linkedin: "https://linkedin.com/in/caroline-meha",
-  twitter: "https://twitter.com",
-  youtube: "https://youtube.com",
-  website: "https://gb-caroline-meha.vercel.app/",
+  twitter: "https://x.com/CarolineMeha",
+  youtube: "https://www.youtube.com/@carolinemeha",
+  website: "https://caroline-ten.vercel.app/",
   roles: ["Développeur Fullstack", "UI/UX Designer", "Formatrice Artisanale"],
-  timezone: "GMT+1 (Benin Time)",
+  timezone: "UTC+1 (WAT)",
   availableStatus: "Disponible pour de nouveaux projets",
-  cvUrl: "/assets/CV.pdf"
+  cvUrl: "/assets/CV.pdf",
+  heroBadge: "Caroline Meha",
+  homeAvailableTitle: "Disponible",
+  homeAvailableSubtitle: "Pour de nouveaux projets",
+  homeStatYears: 8,
+  homeStatProjects: 15,
+  homeStatClients: 12,
+  homeStatSatisfaction: 100,
+  whatsappUrl: "https://wa.me/2290196290528",
+  telegramUrl: "https://t.me/carolinemeha",
 };
 
 export let education: Education[] = [
@@ -453,14 +640,14 @@ export let testimonials: Testimonial[] = [
     name: "Caleb AHOUANDJINOU",
     role: "Propriétaire AHIMARKET",
     content: "Une collaboration exceptionnelle. Caroline a su capturer l'essence de notre marque et créer une plateforme e-commerce intuitive et performante.",
-    avatar: "/assets/testi/caleb.jpg"
+    avatar: ''
   },
   {
     id: "4",
     name: "Fréjuis AHOUANMENOU",
     role: "CEO IWAJUTECH",
     content: "Caroline est une développeuse talentueuse et rigoureuse. Son expertise en UI/UX fait toute la différence sur nos projets complexes.",
-    avatar: "/assets/testi/frejuis.jpg"
+    avatar: ''
   }
 ];
 
@@ -517,18 +704,7 @@ export const dataService = {
   async createProject(project: Omit<Project, 'id'>): Promise<Project | null> {
     const { data, error } = await supabase
       .from('projects')
-      .insert({
-        title: project.title,
-        description: project.description,
-        image: project.image,
-        demo_url: project.demo,
-        github_url: project.github,
-        technologies: project.technologies,
-        category: project.category,
-        status: project.status,
-        date: project.date,
-        featured: project.featured
-      })
+      .insert(projectInsertPayload(project))
       .select()
       .maybeSingle();
 
@@ -540,17 +716,10 @@ export const dataService = {
   },
 
   async updateProject(id: string, updates: Partial<Project>): Promise<Project | null> {
-    const mappedUpdates: any = {};
-    if (updates.title) mappedUpdates.title = updates.title;
-    if (updates.description) mappedUpdates.description = updates.description;
-    if (updates.image) mappedUpdates.image = updates.image;
-    if (updates.demo !== undefined) mappedUpdates.demo_url = updates.demo;
-    if (updates.github !== undefined) mappedUpdates.github_url = updates.github;
-    if (updates.technologies) mappedUpdates.technologies = updates.technologies;
-    if (updates.category) mappedUpdates.category = updates.category;
-    if (updates.status) mappedUpdates.status = updates.status;
-    if (updates.date) mappedUpdates.date = updates.date;
-    if (updates.featured !== undefined) mappedUpdates.featured = updates.featured;
+    const mappedUpdates = projectUpdatePayload(updates);
+    if (Object.keys(mappedUpdates).length === 0) {
+      return this.getProject(id);
+    }
 
     const { data, error } = await supabase
       .from('projects')
@@ -603,27 +772,53 @@ export const dataService = {
   // Skills
   async getSkills(): Promise<Skill[]> {
     try {
-      const { data, error } = await supabase.from('skills').select('*').order('level', { ascending: false });
-      if (error || !data || data.length === 0) return skills;
-      return data;
+      const { data, error } = await supabase
+        .from('skills')
+        .select('*')
+        .order('name', { ascending: true });
+      if (error || !data || data.length === 0) {
+        return skills.map((s) => ({
+          ...s,
+          iconName: s.iconName ?? '',
+        }));
+      }
+      return data.map((row) => mapSkillFromRow(row as Record<string, unknown>));
     } catch (e) {
-      return skills;
+      return skills.map((s) => ({
+        ...s,
+        iconName: s.iconName ?? '',
+      }));
     }
   },
 
   async createSkill(skill: Omit<Skill, 'id'>): Promise<Skill | null> {
-    const { data, error } = await supabase.from('skills').insert(skill).select().maybeSingle();
+    const { data, error } = await supabase
+      .from('skills')
+      .insert({
+        name: skill.name,
+        level: skill.level ?? 0,
+        category: skill.category,
+        icon_name: skill.iconName?.trim() || null,
+      })
+      .select()
+      .maybeSingle();
     if (error) return null;
-    return data;
+    return data ? mapSkillFromRow(data as Record<string, unknown>) : null;
   },
 
   async updateSkill(id: string, updates: Partial<Skill>): Promise<Skill | null> {
-    const { data, error } = await supabase.from('skills').update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    }).eq('id', id).select().maybeSingle();
+    const payload = skillToDbPayload(updates);
+    const { data, error } = await supabase
+      .from('skills')
+      .update({
+        ...payload,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .maybeSingle();
     if (error) return null;
-    return data;
+    return data ? mapSkillFromRow(data as Record<string, unknown>) : null;
   },
 
   async deleteSkill(id: string): Promise<boolean> {
@@ -722,6 +917,13 @@ export const dataService = {
         return aboutInfo; // mock values if DB is empty
       }
 
+      const asInt = (v: unknown): number | undefined => {
+        if (v == null) return undefined;
+        if (typeof v === 'number' && !Number.isNaN(v)) return v;
+        const n = parseInt(String(v), 10);
+        return Number.isNaN(n) ? undefined : n;
+      };
+
       return {
         ...data,
         shopUrl: data.shop_url,
@@ -731,7 +933,27 @@ export const dataService = {
         languages: data.languages,
         nationality: data.nationality,
         roles: data.roles || [],
-        timezone: data.timezone
+        timezone: data.timezone,
+        heroBadge:
+          data.hero_badge != null && String(data.hero_badge).trim() !== ''
+            ? String(data.hero_badge).trim()
+            : '',
+        homeAvailableTitle:
+          data.home_available_title != null &&
+          String(data.home_available_title).trim() !== ''
+            ? String(data.home_available_title).trim()
+            : '',
+        homeAvailableSubtitle:
+          data.home_available_subtitle != null &&
+          String(data.home_available_subtitle).trim() !== ''
+            ? String(data.home_available_subtitle).trim()
+            : '',
+        homeStatYears: asInt(data.home_stat_years),
+        homeStatProjects: asInt(data.home_stat_projects),
+        homeStatClients: asInt(data.home_stat_clients),
+        homeStatSatisfaction: asInt(data.home_stat_satisfaction),
+        whatsappUrl: data.whatsapp_url ?? '',
+        telegramUrl: data.telegram_url ?? '',
       };
     } catch (e) {
       console.error('Unexpected error in getAboutInfo:', e);
@@ -740,13 +962,43 @@ export const dataService = {
   },
 
   async updateAboutInfo(updates: Partial<AboutInfo>): Promise<AboutInfo | null> {
-    // Map camelCase → snake_case, exclude raw camelCase keys from DB payload
-    const { shopUrl, freelanceStatus, availableStatus, cvUrl, ...rest } = updates;
-    const dbPayload: any = { ...rest };
+    const {
+      shopUrl,
+      freelanceStatus,
+      availableStatus,
+      cvUrl,
+      heroBadge,
+      homeAvailableTitle,
+      homeAvailableSubtitle,
+      homeStatYears,
+      homeStatProjects,
+      homeStatClients,
+      homeStatSatisfaction,
+      whatsappUrl,
+      telegramUrl,
+      ...rest
+    } = updates;
+    const dbPayload: Record<string, unknown> = { ...rest };
     if (shopUrl !== undefined) dbPayload.shop_url = shopUrl;
     if (freelanceStatus !== undefined) dbPayload.freelance_status = freelanceStatus;
     if (availableStatus !== undefined) dbPayload.available_status = availableStatus;
     if (cvUrl !== undefined) dbPayload.cv_url = cvUrl;
+    if (heroBadge !== undefined) dbPayload.hero_badge = heroBadge?.trim() || null;
+    if (homeAvailableTitle !== undefined)
+      dbPayload.home_available_title = homeAvailableTitle?.trim() || null;
+    if (homeAvailableSubtitle !== undefined)
+      dbPayload.home_available_subtitle = homeAvailableSubtitle?.trim() || null;
+    if (homeStatYears !== undefined) dbPayload.home_stat_years = homeStatYears;
+    if (homeStatProjects !== undefined)
+      dbPayload.home_stat_projects = homeStatProjects;
+    if (homeStatClients !== undefined)
+      dbPayload.home_stat_clients = homeStatClients;
+    if (homeStatSatisfaction !== undefined)
+      dbPayload.home_stat_satisfaction = homeStatSatisfaction;
+    if (whatsappUrl !== undefined)
+      dbPayload.whatsapp_url = whatsappUrl?.trim() || null;
+    if (telegramUrl !== undefined)
+      dbPayload.telegram_url = telegramUrl?.trim() || null;
     dbPayload.updated_at = new Date().toISOString();
 
     // Check if a row already exists (about is a singleton table)
@@ -782,6 +1034,27 @@ export const dataService = {
       freelanceStatus: data.freelance_status,
       availableStatus: data.available_status,
       cvUrl: data.cv_url,
+      heroBadge: data.hero_badge ?? '',
+      homeAvailableTitle: data.home_available_title ?? '',
+      homeAvailableSubtitle: data.home_available_subtitle ?? '',
+      homeStatYears:
+        typeof data.home_stat_years === 'number'
+          ? data.home_stat_years
+          : undefined,
+      homeStatProjects:
+        typeof data.home_stat_projects === 'number'
+          ? data.home_stat_projects
+          : undefined,
+      homeStatClients:
+        typeof data.home_stat_clients === 'number'
+          ? data.home_stat_clients
+          : undefined,
+      homeStatSatisfaction:
+        typeof data.home_stat_satisfaction === 'number'
+          ? data.home_stat_satisfaction
+          : undefined,
+      whatsappUrl: data.whatsapp_url ?? '',
+      telegramUrl: data.telegram_url ?? '',
     };
   },
 
@@ -811,19 +1084,35 @@ export const dataService = {
   // Testimonials
   async getTestimonials(): Promise<Testimonial[]> {
     const { data, error } = await supabase.from('testimonials').select('*').order('date', { ascending: false });
-    return error ? [] : data;
+    if (error || !data) return [];
+    return data.map((row) => ({
+      ...row,
+      avatar: normalizeTestimonialAvatarUrl(row.avatar),
+    }));
   },
 
   async createTestimonial(testimonial: Omit<Testimonial, 'id'>): Promise<Testimonial | null> {
-    const { data, error } = await supabase.from('testimonials').insert(testimonial).select().maybeSingle();
+    const payload = {
+      ...testimonial,
+      avatar: normalizeTestimonialAvatarUrl(testimonial.avatar),
+    };
+    const { data, error } = await supabase.from('testimonials').insert(payload).select().maybeSingle();
     if (error) return null;
-    return data;
+    return data
+      ? { ...data, avatar: normalizeTestimonialAvatarUrl(data.avatar) }
+      : null;
   },
 
   async updateTestimonial(id: string, updates: Partial<Testimonial>): Promise<Testimonial | null> {
-    const { data, error } = await supabase.from('testimonials').update(updates).eq('id', id).select().maybeSingle();
+    const payload = { ...updates };
+    if ('avatar' in payload && payload.avatar !== undefined) {
+      payload.avatar = normalizeTestimonialAvatarUrl(payload.avatar);
+    }
+    const { data, error } = await supabase.from('testimonials').update(payload).eq('id', id).select().maybeSingle();
     if (error) return null;
-    return data;
+    return data
+      ? { ...data, avatar: normalizeTestimonialAvatarUrl(data.avatar) }
+      : null;
   },
 
   async deleteTestimonial(id: string): Promise<boolean> {
@@ -858,19 +1147,15 @@ export const dataService = {
   async getContactMessages(): Promise<ContactMessage[]> {
     const { data, error } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
     if (error) return [];
-    return data.map(m => ({
-      ...m,
-      createdAt: m.created_at
-    }));
+    return (data || []).map((m) => mapContactRow(m as Record<string, unknown>));
   },
 
   async updateContactMessage(id: string, updates: Partial<ContactMessage>): Promise<ContactMessage | null> {
-    const { data, error } = await supabase.from('contact_messages').update(updates).eq('id', id).select().maybeSingle();
+    const payload: Record<string, unknown> = {};
+    if (updates.status !== undefined) payload.status = updates.status;
+    const { data, error } = await supabase.from('contact_messages').update(payload).eq('id', id).select().maybeSingle();
     if (error) return null;
-    return {
-      ...data,
-      createdAt: data.created_at
-    };
+    return mapContactRow(data as Record<string, unknown>);
   },
 
   async deleteContactMessage(id: string): Promise<boolean> {
@@ -911,83 +1196,224 @@ export const dataService = {
     return !error;
   },
 
+  /** Préférences console persistées (Supabase). */
+  async getConsoleSettings(): Promise<AdminPreferencesV1 | null> {
+    const { data, error } = await supabase
+      .from('admin_console_settings')
+      .select('*')
+      .eq('id', ADMIN_CONSOLE_SETTINGS_ID)
+      .maybeSingle();
+    if (error || !data) return null;
+    const row = data as Record<string, unknown>;
+    const extra = parsePreferencesExtra(row.preferences_extra);
+    return normalizeAdminPreferences({
+      v: 1,
+      brand: {
+        line1: String(row.sidebar_line1 ?? 'Console').slice(0, 28),
+        line2: String(row.sidebar_line2 ?? 'Portfolio').slice(0, 36),
+        logoUrl: String(row.sidebar_logo_url ?? '').trim().slice(0, 2048),
+      },
+      sidebarCompact: Boolean(row.sidebar_compact),
+      reduceMotion: Boolean(row.reduce_motion),
+      landingPath: String(row.landing_path ?? '/admin/dashboard'),
+      publicSiteUrl: String(row.public_site_url ?? '').slice(0, 512),
+      ...extra,
+    });
+  },
+
+  async upsertConsoleSettings(prefs: AdminPreferencesV1): Promise<boolean> {
+    const row = {
+      id: ADMIN_CONSOLE_SETTINGS_ID,
+      public_site_url: prefs.publicSiteUrl,
+      sidebar_line1: prefs.brand.line1,
+      sidebar_line2: prefs.brand.line2,
+      sidebar_logo_url: prefs.brand.logoUrl?.trim() || '',
+      landing_path: prefs.landingPath,
+      sidebar_compact: prefs.sidebarCompact,
+      reduce_motion: prefs.reduceMotion,
+      preferences_extra: preferencesExtraFromPrefs(prefs),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('admin_console_settings').upsert(row);
+    if (error) {
+      console.error('upsertConsoleSettings:', error);
+      return false;
+    }
+    return true;
+  },
+
   // Dashboard & Analytics
   async getDashboardStats(): Promise<DashboardStats> {
-    // Dans une vraie app, on ferait des requêtes COUNT sur les tables analytics
-    // Pour l'instant, on simule à partir des tables réelles ou placeholders si vides
-    const [viewsRes, visitorsRes, downloadsRes] = await Promise.all([
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoIso = weekAgo.toISOString();
+
+    const [
+      viewsTotalRes,
+      viewsWeekRes,
+      visitorsAllRes,
+      visitorsWeekRes,
+      downloadsTotalRes,
+      downloadsWeekRes,
+    ] = await Promise.all([
       supabase.from('page_views').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('page_views')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', weekAgoIso),
       supabase.from('page_views').select('ip_hash'),
-      supabase.from('cv_downloads').select('*', { count: 'exact', head: true })
+      supabase.from('page_views').select('ip_hash').gte('created_at', weekAgoIso),
+      supabase.from('cv_downloads').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('cv_downloads')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', weekAgoIso),
     ]);
 
-    const uniqueIPs = new Set(visitorsRes.data?.map(v => v.ip_hash) || []);
+    const uniq = (rows: { ip_hash: string | null }[] | null | undefined) => {
+      const s = new Set<string>();
+      for (const v of rows || []) {
+        if (v.ip_hash != null && v.ip_hash !== '') s.add(v.ip_hash);
+      }
+      return s.size;
+    };
 
     return {
-      totalViews: viewsRes.count || 0,
-      uniqueVisitors: uniqueIPs.size || 0,
-      cvDownloads: downloadsRes.count || 0,
-      recentActivity: await this.getRecentActivity()
+      totalViews: viewsTotalRes.count ?? 0,
+      viewsThisWeek: viewsWeekRes.count ?? 0,
+      uniqueVisitors: uniq(visitorsAllRes.data as { ip_hash: string | null }[]),
+      uniqueVisitorsThisWeek: uniq(visitorsWeekRes.data as { ip_hash: string | null }[]),
+      cvDownloads: downloadsTotalRes.count ?? 0,
+      cvDownloadsThisWeek: downloadsWeekRes.count ?? 0,
+      recentActivity: await this.getRecentActivity(),
     };
   },
 
   async getRecentActivity(): Promise<ActivityEntry[]> {
     const activity: ActivityEntry[] = [];
 
-    // Dernier projet
-    const { data: latestProject } = await supabase
-      .from('projects')
-      .select('id, title, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    
-    if (latestProject) {
+    const [
+      { data: latestProject },
+      { data: latestSkill },
+      { data: latestMsg },
+      { data: latestExp },
+      { data: latestEdu },
+      { data: latestTesti },
+      { data: latestService },
+    ] = await Promise.all([
+      supabase
+        .from('projects')
+        .select('id, title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('skills')
+        .select('id, name, created_at, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('contact_messages')
+        .select('id, subject, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('experiences')
+        .select('id, company, position, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('education')
+        .select('id, institution, degree, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('testimonials')
+        .select('id, name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('services')
+        .select('id, title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (latestProject?.created_at) {
       activity.push({
         id: latestProject.id,
         type: 'project',
-        title: 'Projet ajouté',
         subtitle: latestProject.title,
-        date: latestProject.created_at
+        date: latestProject.created_at,
       });
     }
 
-    // Dernière compétence (ajoutée ou mise à jour)
-    const { data: latestSkill } = await supabase
-      .from('skills')
-      .select('id, name, created_at, updated_at')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    
     if (latestSkill) {
-      activity.push({
-        id: latestSkill.id,
-        type: 'skill',
-        title: 'Compétence mise à jour',
-        subtitle: `${latestSkill.name}`,
-        date: latestSkill.updated_at || latestSkill.created_at
-      });
+      const d = latestSkill.updated_at || latestSkill.created_at;
+      if (d) {
+        activity.push({
+          id: latestSkill.id,
+          type: 'skill',
+          subtitle: latestSkill.name,
+          date: d,
+        });
+      }
     }
 
-    // Dernier message
-    const { data: latestMsg } = await supabase
-      .from('contact_messages')
-      .select('id, subject, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    
-    if (latestMsg) {
+    if (latestMsg?.created_at) {
       activity.push({
         id: latestMsg.id,
         type: 'message',
-        title: 'Nouveau message',
-        subtitle: latestMsg.subject,
-        date: latestMsg.created_at
+        subtitle: latestMsg.subject?.trim() || '',
+        date: latestMsg.created_at,
       });
     }
 
-    return activity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    if (latestExp?.created_at) {
+      activity.push({
+        id: latestExp.id,
+        type: 'experience',
+        subtitle: `${latestExp.position} — ${latestExp.company}`,
+        date: latestExp.created_at,
+      });
+    }
+
+    if (latestEdu?.created_at) {
+      activity.push({
+        id: latestEdu.id,
+        type: 'education',
+        subtitle: `${latestEdu.degree} — ${latestEdu.institution}`,
+        date: latestEdu.created_at,
+      });
+    }
+
+    if (latestTesti?.created_at) {
+      activity.push({
+        id: latestTesti.id,
+        type: 'testimonial',
+        subtitle: latestTesti.name,
+        date: latestTesti.created_at,
+      });
+    }
+
+    if (latestService?.created_at) {
+      activity.push({
+        id: latestService.id,
+        type: 'service',
+        subtitle: latestService.title,
+        date: latestService.created_at,
+      });
+    }
+
+    return activity
+      .filter((a) => a.date && !Number.isNaN(new Date(a.date).getTime()))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 8);
   }
 };

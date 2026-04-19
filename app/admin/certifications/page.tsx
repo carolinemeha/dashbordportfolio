@@ -7,31 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { dataService, Certification } from '@/lib/data';
 import { Plus, Edit, Trash2, Award, Calendar, Building, LinkIcon } from 'lucide-react';
 import CertificationForm from '@/components/admin/CertificationForm';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { 
-      type: "spring", 
-      stiffness: 300, 
-      damping: 24 
-    } 
-  },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
-};
+import { motion, AnimatePresence } from 'framer-motion';
+import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
+import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
+import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 
 export default function CertificationsPage() {
+  const { t } = useAdminI18n();
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCert, setEditingCert] = useState<Certification | null>(null);
@@ -64,7 +46,7 @@ export default function CertificationsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette certification ?')) {
+    if (confirm(t('confirm.deleteCertification'))) {
       const success = await dataService.deleteCertification(id);
       if (success) {
         setCertifications(certifications.filter(c => c.id !== id));
@@ -84,40 +66,27 @@ export default function CertificationsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <motion.h1 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
-            className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
-          >
-            Certifications
-          </motion.h1>
-          <motion.p 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
-            className="mt-2 text-sm text-muted-foreground"
-          >
-            Gérez vos diplômes, certifications et reconnaissances professionnelles.
-          </motion.p>
-        </div>
-        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
-          <Button onClick={() => setIsFormOpen(true)} className="shadow-lg hover:shadow-primary/25 transition-all">
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter une certification
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageToolbar>
+        <Button
+          onClick={() => setIsFormOpen(true)}
+          className="rounded-xl shadow-md hover:shadow-primary/20 transition-all"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {t('pages.certifications.add')}
+        </Button>
+      </AdminPageToolbar>
 
       <AnimatePresence mode="popLayout">
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
+        <motion.div
+          variants={adminStaggerContainer}
+          initial={false}
           animate="show"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           {certifications.map((cert) => (
-            <motion.div 
-              key={cert.id} 
-              variants={itemVariants}
+            <motion.div
+              key={cert.id}
+              variants={adminStaggerItemExit}
               layout
               exit="exit"
             >
@@ -166,16 +135,16 @@ export default function CertificationsPage() {
       </AnimatePresence>
 
       {certifications.length === 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+        <motion.div
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center justify-center py-20 text-center"
         >
           <div className="p-6 bg-secondary/20 rounded-full mb-4">
             <Award className="h-12 w-12 text-muted-foreground opacity-30" />
           </div>
-          <h3 className="text-xl font-semibold opacity-50">Aucune certification</h3>
-          <p className="text-muted-foreground mt-2 max-w-sm">Ajoutez vos diplômes ou certifications professionnelles pour enrichir votre profil.</p>
+          <h3 className="text-xl font-semibold opacity-50">{t('pages.certifications.emptyTitle')}</h3>
+          <p className="text-muted-foreground mt-2 max-w-sm">{t('pages.certifications.emptyDesc')}</p>
         </motion.div>
       )}
 

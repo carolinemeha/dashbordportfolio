@@ -4,26 +4,116 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { dataService, AboutInfo } from '@/lib/data';
-import { Edit, User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter, AtSign, Info, Briefcase, Languages, ShoppingBag, Youtube } from 'lucide-react';
-import AboutForm from '../../../components/admin/AboutForm';
+import { Edit, User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter, AtSign, Info, Briefcase, Languages, ShoppingBag, Youtube, Sparkles, BarChart3 } from 'lucide-react';
+import AboutForm from '@/components/admin/AboutForm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Activity, FileText } from 'lucide-react';
+import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
+import { adminStaggerContainer, adminStaggerItem } from '@/lib/admin-motion';
+import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
+const HOME_STATS_DEFAULT = {
+  years: 8,
+  projects: 15,
+  clients: 12,
+  satisfaction: 100,
+} as const;
+
+/** Textes effectifs pour l’aperçu « Accueil » (même logique de repli que la vitrine). */
+function aboutHomePreview(about: AboutInfo) {
+  const pastille =
+    about.heroBadge?.trim() ||
+    about.name?.trim() ||
+    '—';
+
+  const dispoTitle =
+    about.homeAvailableTitle?.trim() ||
+    about.freelanceStatus?.trim() ||
+    '';
+  const dispoSub = about.homeAvailableSubtitle?.trim() || '';
+  const statusFull = about.availableStatus?.trim() || '';
+
+  let title = dispoTitle;
+  let subtitle = dispoSub;
+  if (!title && statusFull) {
+    title = statusFull;
+  } else if (title && !subtitle && statusFull && statusFull !== title) {
+    subtitle = statusFull;
   }
-};
+  if (!title) title = '—';
+  if (!subtitle) subtitle = '—';
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
-};
+  return {
+    pastille,
+    dispoTitle: title,
+    dispoSub: subtitle,
+    statYears: about.homeStatYears ?? HOME_STATS_DEFAULT.years,
+    statProjects: about.homeStatProjects ?? HOME_STATS_DEFAULT.projects,
+    statClients: about.homeStatClients ?? HOME_STATS_DEFAULT.clients,
+    statSatisfaction:
+      about.homeStatSatisfaction ?? HOME_STATS_DEFAULT.satisfaction,
+  };
+}
+
+function AboutHomePreviewCard({ about }: { about: AboutInfo }) {
+  const { t } = useAdminI18n();
+  const h = aboutHomePreview(about);
+  return (
+    <Card className="glass-card border-violet-500/20">
+      <CardHeader className="pb-3 border-b border-border/30 bg-violet-500/5">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-violet-500" />
+          {t('pages.about.homePreviewTitle')}
+        </CardTitle>
+        <CardDescription>
+          {t('pages.about.homePreviewDesc')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-4 space-y-4 text-sm">
+        <div className="rounded-lg border border-border/40 bg-secondary/20 p-3 space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t('pages.about.badgeLabel')}
+          </p>
+          <p className="font-medium text-foreground">{h.pastille}</p>
+        </div>
+        <div className="rounded-lg border border-border/40 bg-secondary/20 p-3 space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t('pages.about.availabilityBlock')}
+          </p>
+          <p className="font-medium text-foreground">
+            <span>{h.dispoTitle}</span>
+            <span className="text-muted-foreground mx-1.5">·</span>
+            <span>{h.dispoSub}</span>
+          </p>
+        </div>
+        <div className="flex items-start gap-2">
+          <BarChart3 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+          <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 w-full max-w-sm">
+            <span className="text-muted-foreground">{t('pages.about.statExp')}</span>
+            <span className="font-medium tabular-nums">{h.statYears}</span>
+            <span className="text-muted-foreground">{t('pages.about.statProjects')}</span>
+            <span className="font-medium tabular-nums">{h.statProjects}</span>
+            <span className="text-muted-foreground">{t('pages.about.statClients')}</span>
+            <span className="font-medium tabular-nums">{h.statClients}</span>
+            <span className="text-muted-foreground">{t('pages.about.statSatisfaction')}</span>
+            <span className="font-medium tabular-nums">{h.statSatisfaction}%</span>
+          </div>
+        </div>
+        {(about.whatsappUrl || about.telegramUrl) && (
+          <p className="text-xs text-muted-foreground pt-2 border-t border-border/30">
+            {t('pages.about.contactHint')} {about.whatsappUrl ? t('pages.about.whatsappOk') : ''}
+            {about.whatsappUrl && about.telegramUrl ? ' · ' : ''}
+            {about.telegramUrl ? t('pages.about.telegramOk') : ''}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AboutPage() {
+  const { t } = useAdminI18n();
   const [about, setAbout] = useState<AboutInfo | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -53,53 +143,37 @@ export default function AboutPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <motion.h1 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
-            className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
-          >
-            À propos de moi
-          </motion.h1>
-          <motion.p 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
-            className="mt-2 text-sm text-muted-foreground"
-          >
-            Gérez vos informations personnelles et vos coordonnées
-          </motion.p>
-        </div>
-        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
-          <Button onClick={openEditForm} className="shadow-lg hover:shadow-primary/25 transition-all">
-            <Edit className="h-4 w-4 mr-2" />
-            {about ? 'Modifier le profil' : 'Créer mon profil'}
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageToolbar>
+        <Button onClick={openEditForm} className="rounded-xl shadow-md hover:shadow-primary/20 transition-all">
+          <Edit className="h-4 w-4 mr-2" />
+          {about ? t('pages.about.editProfile') : t('pages.about.createProfile')}
+        </Button>
+      </AdminPageToolbar>
 
       {!about ? (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
           <Card className="glass-card border-dashed border-2 border-border/50 bg-secondary/20">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="p-4 bg-primary/10 rounded-full mb-4">
                 <User className="h-12 w-12 text-primary/60" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Aucune information</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm">Commencez par ajouter vos informations personnelles pour que les visiteurs puissent vous découvrir.</p>
+              <h3 className="text-xl font-semibold text-foreground mb-2">{t('pages.about.emptyTitle')}</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm">{t('pages.about.emptyDesc')}</p>
               <Button onClick={openEditForm} size="lg">
                 <Edit className="h-4 w-4 mr-2" />
-                Ajouter mes informations
+                {t('pages.about.addInfo')}
               </Button>
             </CardContent>
           </Card>
         </motion.div>
       ) : (
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
+        <motion.div
+          variants={adminStaggerContainer}
+          initial={false}
           animate="show"
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          <motion.div variants={itemVariants} className="lg:col-span-1 space-y-6">
+          <motion.div variants={adminStaggerItem} className="lg:col-span-1 space-y-6">
             {/* Profil Rapide */}
             <Card className="glass-card overflow-hidden relative">
               <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-primary/20 to-transparent"></div>
@@ -132,7 +206,7 @@ export default function AboutPage() {
                       <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Email</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t('pages.about.email')}</p>
                       <p className="text-sm font-medium text-foreground/80 truncate">{about.email}</p>
                     </div>
                   </div>
@@ -141,7 +215,7 @@ export default function AboutPage() {
                       <Phone className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Téléphone</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t('pages.about.phone')}</p>
                       <p className="text-sm font-medium text-foreground/80">{about.phone}</p>
                     </div>
                   </div>
@@ -150,7 +224,7 @@ export default function AboutPage() {
                       <MapPin className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Localisation</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t('pages.about.location')}</p>
                       <p className="text-sm font-medium text-foreground/80">{about.location}</p>
                     </div>
                   </div>
@@ -163,14 +237,14 @@ export default function AboutPage() {
               <CardHeader className="pb-3 border-b border-border/30 bg-secondary/10">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Info className="h-4 w-4 text-primary" />
-                  Informations clés
+                  {t('pages.about.keyInfo')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 grid grid-cols-1 gap-4">
                 <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3">
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Expérience</span>
+                    <span className="text-xs text-muted-foreground">{t('pages.about.experience')}</span>
                   </div>
                   <span className="text-sm font-semibold">{about.experience || "-"}</span>
                 </div>
@@ -184,28 +258,28 @@ export default function AboutPage() {
                 <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Freelance</span>
+                    <span className="text-xs text-muted-foreground">{t('pages.about.freelance')}</span>
                   </div>
                   <span className="text-sm font-semibold">{about.freelanceStatus || "-"}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Timezone</span>
+                    <span className="text-xs text-muted-foreground">{t('pages.about.timezone')}</span>
                   </div>
                   <span className="text-sm font-semibold">{about.timezone || "-"}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3 mb-1">
                     <Activity className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Disponibilité</span>
+                    <span className="text-xs text-muted-foreground">{t('pages.about.availability')}</span>
                   </div>
                   <p className="text-sm font-semibold pl-7">{about.availableStatus || "-"}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3 mb-1">
                     <Languages className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Langues</span>
+                    <span className="text-xs text-muted-foreground">{t('pages.about.languages')}</span>
                   </div>
                   <p className="text-sm font-semibold pl-7">{about.languages || "-"}</p>
                 </div>
@@ -213,19 +287,21 @@ export default function AboutPage() {
                   <Button variant="outline" size="sm" className="w-full mt-2 border-primary/20 hover:bg-primary/5 group" asChild>
                     <a href={about.cvUrl} target="_blank" rel="noopener noreferrer">
                       <FileText className="h-4 w-4 mr-2 text-primary" />
-                      Télécharger mon CV
+                      {t('pages.about.downloadCv')}
                     </a>
                   </Button>
                 )}
               </CardContent>
             </Card>
 
+            <AboutHomePreviewCard about={about} />
+
             {/* Réseaux Sociaux */}
             <Card className="glass-card">
               <CardHeader className="pb-3 border-b border-border/30 bg-secondary/10">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <AtSign className="h-4 w-4 text-primary" />
-                  Présence en ligne
+                  {t('pages.about.onlinePresence')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 space-y-1">
@@ -233,7 +309,7 @@ export default function AboutPage() {
                   <a href={about.website} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
                     <div className="flex items-center space-x-3">
                       <Globe className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      <span className="text-sm font-medium text-foreground/80">Site Intenet</span>
+                      <span className="text-sm font-medium text-foreground/80">{t('pages.about.siteWeb')}</span>
                     </div>
                   </a>
                 )}
@@ -241,7 +317,7 @@ export default function AboutPage() {
                   <a href={about.shopUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
                     <div className="flex items-center space-x-3">
                       <ShoppingBag className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      <span className="text-sm font-medium text-foreground/80">Boutique en ligne</span>
+                      <span className="text-sm font-medium text-foreground/80">{t('pages.about.shop')}</span>
                     </div>
                   </a>
                 )}
@@ -265,7 +341,7 @@ export default function AboutPage() {
                   <a href={about.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50 transition-colors group">
                     <div className="flex items-center space-x-3">
                       <Twitter className="h-5 w-5 text-muted-foreground group-hover:text-[#1DA1F2] transition-colors" />
-                      <span className="text-sm font-medium text-foreground/80">Twitter / X</span>
+                      <span className="text-sm font-medium text-foreground/80">{t('pages.about.twitterX')}</span>
                     </div>
                   </a>
                 )}
@@ -278,27 +354,27 @@ export default function AboutPage() {
                   </a>
                 )}
                 {(!about.website && !about.github && !about.linkedin && !about.twitter && !about.youtube && !about.shopUrl) && (
-                  <p className="text-sm text-muted-foreground italic">Aucun lien renseigné.</p>
+                  <p className="text-sm text-muted-foreground italic">{t('pages.about.noLinks')}</p>
                 )}
               </CardContent>
             </Card>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="lg:col-span-2">
+          <motion.div variants={adminStaggerItem} className="lg:col-span-2">
             <Card className="glass-card h-full">
               <CardHeader className="border-b border-border/30 bg-secondary/10">
                 <CardTitle className="text-xl flex items-center gap-2">
                   <Info className="h-5 w-5 text-primary" />
-                  Biographie
+                  {t('pages.about.bioTitle')}
                 </CardTitle>
                 <CardDescription>
-                  Ce texte est affiché sur votre page d'accueil pour vous présenter.
+                  {t('pages.about.bioDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none">
                   <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                    {about.bio || "Aucune biographie."}
+                    {about.bio || t('pages.about.noBio')}
                   </p>
                 </div>
               </CardContent>
@@ -309,6 +385,7 @@ export default function AboutPage() {
 
       {isFormOpen && (
         <AboutForm
+          key={about ? 'edit' : 'create'}
           about={about}
           onSave={handleUpdate}
           onCancel={closeForm}

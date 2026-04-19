@@ -4,62 +4,81 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* Fond légèrement teinté pour contraste doux */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --popover-foreground: 222 47% 11%;
+    /* Primaire teal — lisible et professionnel */
+    --primary: 187 72% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 24% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 24% 94%;
+    --muted-foreground: 215 16% 38%;
+    --accent: 187 45% 94%;
+    --accent-foreground: 187 72% 28%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 187 72% 36%;
     --radius: 0.75rem;
 
+    --sidebar: 210 22% 96%;
+    --sidebar-foreground: 222 40% 18%;
+    --sidebar-border: 214 28% 90%;
+    --sidebar-accent: 187 40% 92%;
+    --sidebar-ring: 187 72% 36%;
+
+    --admin-surface-glow: 187 65% 45%;
+    --admin-mesh-2: 230 55% 58%;
+
     /* Chart colors */
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --chart-1: 187 72% 42%;
+    --chart-2: 230 55% 52%;
+    --chart-3: 197 37% 32%;
+    --chart-4: 43 74% 52%;
+    --chart-5: 340 70% 52%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 40% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 172 58% 48%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 217 24% 16%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 24% 16%;
+    --muted-foreground: 215 20% 72%;
+    --accent: 187 35% 18%;
+    --accent-foreground: 172 70% 78%;
+    --destructive: 0 62% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 24% 18%;
+    --input: 217 24% 18%;
+    --ring: 172 58% 48%;
 
-    /* Chart colors */
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --sidebar: 222 44% 8%;
+    --sidebar-foreground: 210 35% 95%;
+    --sidebar-border: 217 24% 16%;
+    --sidebar-accent: 187 30% 16%;
+    --sidebar-ring: 172 58% 48%;
+
+    --admin-surface-glow: 172 58% 40%;
+    --admin-mesh-2: 230 50% 48%;
+
+    --chart-1: 172 58% 50%;
+    --chart-2: 230 55% 55%;
+    --chart-3: 30 75% 55%;
+    --chart-4: 280 55% 58%;
+    --chart-5: 340 65% 55%;
   }
 }
 
@@ -67,20 +86,89 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    body {
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-white/60 backdrop-blur-md border border-white/20 dark:bg-black/60 dark:border-white/10;
+    @apply backdrop-blur-xl border border-border/60 shadow-sm;
+    background-color: hsl(var(--background) / 0.78);
   }
   .glass-card {
-    @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-lg dark:bg-gray-950/80 dark:border-white/10 dark:shadow-2xl;
+    @apply backdrop-blur-xl border border-border/50 shadow-md;
+    background-color: hsl(var(--card) / 0.88);
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground;
+  }
+  .admin-surface {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(
+        ellipse 120% 80% at 100% -20%,
+        hsl(var(--admin-surface-glow) / 0.12),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 90% 60% at -10% 110%,
+        hsl(var(--admin-mesh-2) / 0.1),
+        transparent 50%
+      );
+  }
+  .dark .admin-surface {
+    background-image:
+      radial-gradient(
+        ellipse 120% 80% at 100% -20%,
+        hsl(var(--admin-surface-glow) / 0.18),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 90% 60% at -10% 110%,
+        hsl(var(--admin-mesh-2) / 0.12),
+        transparent 50%
+      );
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /** Défilement visible et fin pour la liste de navigation latérale */
+  .sidebar-nav-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+  }
+  .sidebar-nav-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .sidebar-nav-scroll::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.35);
+    border-radius: 9999px;
+  }
+  .sidebar-nav-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /** Préférence admin : réduire les animations (voir lib/admin-preferences) */
+  .admin-reduce-motion *,
+  .admin-reduce-motion *::before,
+  .admin-reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

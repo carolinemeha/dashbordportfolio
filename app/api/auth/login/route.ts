@@ -22,17 +22,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const displayName =
+      process.env.ADMIN_DISPLAY_NAME?.trim() || 'Administrateur';
+
     const token = await signToken({
       sub: '1',
       email: adminEmail,
-      name: 'Portfolio Admin',
+      name: displayName,
       role: 'admin',
     });
 
     // In Next.js 13, set cookies via NextResponse
     const response = NextResponse.json({
       success: true,
-      name: 'Portfolio Admin',
+      name: displayName,
       email: adminEmail,
     });
 

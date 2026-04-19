@@ -8,22 +8,12 @@ import { dataService, Experience } from '@/lib/data';
 import { Plus, Edit, Trash2, Briefcase, Calendar, CheckCircle2 } from 'lucide-react';
 import ExperienceForm from '@/components/admin/ExperienceForm';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
-};
+import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
+import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
+import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 
 export default function ExperiencesPage() {
+  const { t } = useAdminI18n();
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExperience, setEditingExperience] = useState<Experience | null>(null);
@@ -56,7 +46,7 @@ export default function ExperiencesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette expérience ?')) {
+    if (confirm(t('confirm.deleteExperience'))) {
       const success = await dataService.deleteExperience(id);
       if (success) {
         const refreshedData = await dataService.getExperiences();
@@ -77,55 +67,42 @@ export default function ExperiencesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <motion.h1 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
-            className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
-          >
-            Expériences
-          </motion.h1>
-          <motion.p 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
-            className="mt-2 text-sm text-muted-foreground"
-          >
-            Gérez la chronologie de votre parcours professionnel
-          </motion.p>
-        </div>
-        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
-          <Button onClick={() => setIsFormOpen(true)} className="shadow-lg hover:shadow-primary/25 transition-all">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle expérience
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageToolbar>
+        <Button
+          onClick={() => setIsFormOpen(true)}
+          className="rounded-xl shadow-md hover:shadow-primary/20 transition-all"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {t('pages.experiences.new')}
+        </Button>
+      </AdminPageToolbar>
 
       {experiences.length === 0 ? (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
           <Card className="glass-card border-dashed border-2 border-border/50 bg-secondary/20">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="p-4 bg-primary/10 rounded-full mb-4">
                 <Briefcase className="h-12 w-12 text-primary/60" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Aucune expérience</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm">Commencez par ajouter votre première expérience professionnelle pour construire votre timeline.</p>
+              <h3 className="text-xl font-semibold text-foreground mb-2">{t('pages.experiences.emptyTitle')}</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm">{t('pages.experiences.emptyDesc')}</p>
               <Button onClick={() => setIsFormOpen(true)} size="lg">
                 <Plus className="h-4 w-4 mr-2" />
-                Ajouter une expérience
+                {t('pages.experiences.add')}
               </Button>
             </CardContent>
           </Card>
         </motion.div>
       ) : (
         <motion.div 
-          variants={containerVariants}
-          initial="hidden"
+          variants={adminStaggerContainer}
+          initial={false}
           animate="show"
           className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border/50 before:to-transparent"
         >
           <AnimatePresence>
             {experiences.map((experience) => (
-              <motion.div key={experience.id} variants={itemVariants} exit="exit" layout className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+              <motion.div key={experience.id} variants={adminStaggerItemExit} exit="exit" layout className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                 {/* Timeline Icon */}
                 <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-primary/20 text-primary shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow md:mx-auto relative z-10 box-content transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
                   <Briefcase className="h-4 w-4" />
@@ -164,7 +141,7 @@ export default function ExperiencesPage() {
                              </div>
                            ))
                          ) : (
-                           <p className="italic text-muted-foreground">Aucun détail fourni.</p>
+                           <p className="italic text-muted-foreground">{t('pages.experiences.noDetails')}</p>
                          )}
                       </div>
                       

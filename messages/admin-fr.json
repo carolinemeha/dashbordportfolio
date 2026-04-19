@@ -1,0 +1,292 @@
+{
+  "common": {
+    "loading": "Chargement…",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "yes": "Oui",
+    "no": "Non",
+    "copy": "Copier",
+    "pathCopied": "Chemin copié.",
+    "administration": "Administration",
+    "adminPanelHint": "Panneau de configuration du portfolio."
+  },
+  "locale": {
+    "label": "Langue de l’interface",
+    "description": "Même principe que le site public (français / anglais). Les textes de la console s’adaptent ; le contenu en base (projets, etc.) reste celui que vous saisissez.",
+    "fr": "Français",
+    "en": "English",
+    "shortFr": "FR",
+    "shortEn": "EN"
+  },
+  "nav": {
+    "dashboard": {
+      "name": "Tableau de bord",
+      "heading": "Vue d’ensemble",
+      "description": "Statistiques du contenu, activité récente et indicateurs."
+    },
+    "projects": {
+      "name": "Projets",
+      "heading": "Projets portfolio",
+      "description": "Gérez et mettez en valeur vos réalisations."
+    },
+    "experiences": {
+      "name": "Expériences",
+      "heading": "Expériences professionnelles",
+      "description": "Chronologie de votre parcours et postes occupés."
+    },
+    "skills": {
+      "name": "Compétences",
+      "heading": "Compétences",
+      "description": "Inventaire de votre savoir-faire technique et outils."
+    },
+    "services": {
+      "name": "Services",
+      "heading": "Services",
+      "description": "Offres et prestations présentées sur le site."
+    },
+    "about": {
+      "name": "Profil & accueil",
+      "heading": "Profil & accueil",
+      "description": "Bio, photo, vitrine et liens."
+    },
+    "cv": {
+      "name": "CV",
+      "heading": "Curriculum Vitae",
+      "description": "Fichier CV téléchargeable et métadonnées associées."
+    },
+    "education": {
+      "name": "Éducation",
+      "heading": "Éducation",
+      "description": "Formations, diplômes et parcours académique."
+    },
+    "certifications": {
+      "name": "Certifications",
+      "heading": "Certifications",
+      "description": "Diplômes, certifications et reconnaissances professionnelles."
+    },
+    "testimonials": {
+      "name": "Témoignages",
+      "heading": "Témoignages clients",
+      "description": "Avis, citations et recommandations affichés sur le portfolio."
+    },
+    "contact": {
+      "name": "Messages",
+      "heading": "Formulaire contact",
+      "description": "Demandes reçues (coordonnées, service, budget, message) comme sur le site."
+    },
+    "settings": {
+      "name": "Paramètres",
+      "heading": "Paramètres",
+      "description": "Langue, apparence, barre latérale et compte."
+    }
+  },
+  "header": {
+    "openMenu": "Ouvrir le menu",
+    "logout": "Se déconnecter",
+    "copyPathTitle": "Copier le chemin"
+  },
+  "sidebar": {
+    "contentSection": "Contenu du site",
+    "logout": "Déconnexion",
+    "mobileMenuTitle": "Menu de navigation"
+  },
+  "auth": {
+    "checking": "Vérification de la session…"
+  },
+  "login": {
+    "title": "Espace sécurisé",
+    "subtitle": "Connectez-vous pour accéder à l’administration",
+    "cardTitle": "Identification requise",
+    "cardDescription": "Entrez vos identifiants administrateur.",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "submitLoading": "Connexion…",
+    "errorCredentials": "E-mail ou mot de passe incorrect",
+    "errorGeneric": "Une erreur est survenue lors de la connexion",
+    "footerHint": "Accès réservé. Toute tentative non autorisée peut être enregistrée."
+  },
+  "theme": {
+    "toLight": "Passer en thème clair",
+    "toDark": "Passer en thème sombre",
+    "toggle": "Changer le thème"
+  },
+  "dashboard": {
+    "stats": {
+      "projects": "Projets",
+      "projectsDesc": "Projets portfolio",
+      "experiences": "Expériences",
+      "experiencesDesc": "Expériences professionnelles",
+      "skills": "Compétences",
+      "skillsDesc": "Compétences techniques",
+      "services": "Services",
+      "servicesDesc": "Services proposés",
+      "education": "Éducation",
+      "educationDesc": "Formations et diplômes",
+      "testimonials": "Témoignages",
+      "testimonialsDesc": "Avis clients",
+      "messages": "Messages",
+      "messagesNew": "{count} nouveau(x)"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "description": "Dernières modifications apportées",
+      "empty": "Aucune activité récente.",
+      "typeProject": "Dernier projet",
+      "typeSkill": "Compétence",
+      "typeMessage": "Message contact",
+      "typeExperience": "Expérience",
+      "typeEducation": "Formation",
+      "typeTestimonial": "Témoignage",
+      "typeService": "Service",
+      "noSubject": "(sans objet)"
+    },
+    "performance": {
+      "title": "Performances",
+      "description": "Données analytics Supabase (fenêtre 7 jours + totaux)",
+      "viewsWeek": "Vues (7 derniers jours)",
+      "viewsTotal": "Total : {count}",
+      "cvWeek": "Téléchargements CV (7 j.)",
+      "cvTotal": "Total : {count}",
+      "visitorsWeek": "Visiteurs uniques (7 j.)",
+      "visitorsTotal": "Total distincts : {count}",
+      "ipHashHint": "ip_hash"
+    }
+  },
+  "settings": {
+    "appearance": {
+      "title": "Apparence",
+      "description": "Thème de l’interface (synchronisé avec le bouton dans l’en-tête).",
+      "light": "Clair",
+      "lightDesc": "Fond clair, contrastes doux",
+      "dark": "Sombre",
+      "darkDesc": "Idéal en faible luminosité",
+      "system": "Système",
+      "systemDesc": "Suit les réglages de l’appareil"
+    },
+    "sidebar": {
+      "title": "Barre latérale",
+      "description": "Logo, texte sous le visuel et libellés : stockés localement et dans Supabase.",
+      "logoLabel": "Logo (barre latérale)",
+      "line1": "Ligne supérieure (petites capitales)",
+      "line2": "Titre principal",
+      "saveLabels": "Enregistrer les libellés",
+      "resetLabels": "Réinitialiser",
+      "toastLabelsSaved": "Libellés de la barre latérale enregistrés.",
+      "toastLabelsReset": "Libellés réinitialisés.",
+      "logoUploaded": "Logo téléversé. Il apparaît dans la barre latérale."
+    },
+    "navigation": {
+      "title": "Navigation",
+      "description": "Page ouverte automatiquement après une connexion réussie sur cet appareil.",
+      "landingLabel": "Page d’accueil après connexion",
+      "placeholder": "Choisir une page",
+      "toastLanding": "Page après connexion mise à jour."
+    },
+    "interface": {
+      "title": "Interface",
+      "description": "Options d’affichage de la console (ce navigateur uniquement).",
+      "sidebarCompact": "Barre latérale compacte",
+      "sidebarCompactDesc": "Sur grand écran : icônes seules, infobulles au survol.",
+      "compactOn": "Mode compact activé.",
+      "compactOff": "Mode compact désactivé.",
+      "reduceMotion": "Réduire les animations",
+      "reduceMotionDesc": "Raccourcit transitions et animations dans l’admin.",
+      "motionOn": "Animations réduites.",
+      "motionOff": "Animations normales rétablies."
+    },
+    "layout": {
+      "title": "Mise en page du contenu",
+      "description": "Marges du panneau principal (en plus du mode sidebar compact).",
+      "density": "Densité",
+      "comfortable": "Confortable",
+      "compact": "Compact",
+      "toastComfortable": "Marges confortables.",
+      "toastCompact": "Marges réduites."
+    },
+    "banner": {
+      "title": "Bandeau et en-tête",
+      "description": "Texte visible sous la barre d’outils sur toutes les pages, et options de l’en-tête.",
+      "bannerLabel": "Message du bandeau (optionnel)",
+      "bannerPlaceholder": "Ex. : Maintenance prévue dimanche 22h–23h.",
+      "chars": "{n}/200",
+      "headerMinimal": "En-tête minimal",
+      "headerMinimalDesc": "Masque la description longue sous le titre (garde le titre et les actions).",
+      "minimalOn": "En-tête allégé.",
+      "minimalOff": "Description rétablie.",
+      "routeCrumb": "Fil de route",
+      "routeCrumbDesc": "Affiche le chemin de la page avec copie en un clic.",
+      "routeOn": "Chemin affiché.",
+      "routeOff": "Chemin masqué."
+    },
+    "dashboardPrefs": {
+      "title": "Tableau de bord",
+      "description": "Affichage des dates d’activité et rafraîchissement des chiffres.",
+      "dateStyle": "Style des dates (activité récente)",
+      "relative": "Relatif (il y a 2 heures)",
+      "absolute": "Absolu (19 avr. 2026, 14:30)",
+      "toastRelative": "Dates relatives.",
+      "toastAbsolute": "Dates absolues.",
+      "autoRefresh": "Rafraîchissement automatique",
+      "autoRefreshDesc": "Recharge les statistiques du tableau de bord environ toutes les 45 secondes (onglet ouvert).",
+      "autoOn": "Actualisation automatique activée.",
+      "autoOff": "Actualisation désactivée."
+    },
+    "health": {
+      "title": "Diagnostic Supabase",
+      "description": "Vérifie les variables publiques et une lecture simple sur la table about. Aucun secret n’est renvoyé au navigateur.",
+      "run": "Lancer le diagnostic",
+      "ok": "Connexion Supabase opérationnelle.",
+      "done": "Diagnostic terminé — voir le détail ci-dessous.",
+      "error": "Impossible de contacter le serveur de diagnostic."
+    },
+    "publicSite": {
+      "title": "Site public",
+      "description": "Raccourci optionnel pour ouvrir votre portfolio vitrine depuis la console.",
+      "urlLabel": "URL du portfolio",
+      "saveUrl": "Enregistrer l’URL",
+      "openNew": "Ouvrir dans un nouvel onglet",
+      "placeholder": "https://exemple.com",
+      "toastUrlSaved": "Raccourci du site public enregistré."
+    },
+    "backup": {
+      "title": "Sauvegarde locale",
+      "description": "Exporter ou importer un fichier JSON de préférences (même navigateur ou autre machine).",
+      "export": "Exporter JSON",
+      "import": "Importer JSON",
+      "resetAll": "Tout réinitialiser",
+      "resetTitle": "Réinitialiser toutes les préférences ?",
+      "resetDescription": "Cela remet les réglages locaux (thème inchangé), la barre latérale, la navigation après connexion et les raccourcis à leurs valeurs par défaut sur cet appareil. Cette action ne supprime aucune donnée du site.",
+      "confirm": "Réinitialiser",
+      "toastExported": "Préférences exportées.",
+      "toastImported": "Préférences importées.",
+      "toastResetLocal": "Toutes les préférences locales ont été réinitialisées."
+    },
+    "sync": {
+      "title": "Synchronisation Supabase",
+      "description": "Les réglages sont en local et copiés vers admin_console_settings (colonnes + preferences_extra JSON). Rechargement au démarrage si la ligne existe.",
+      "pull": "Charger depuis le cloud",
+      "push": "Pousser maintenant",
+      "toastPullOk": "Préférences chargées depuis Supabase.",
+      "toastPullEmpty": "Aucune ligne dans admin_console_settings — enregistrez une fois pour créer la fiche.",
+      "toastPushOk": "Préférences enregistrées dans Supabase.",
+      "toastPushErr": "Échec de l’enregistrement (voir la console)."
+    },
+    "profile": {
+      "title": "Profil affiché dans la console",
+      "description": "Identité tirée de la fiche « Profil & accueil » (table about) et de votre session.",
+      "displayName": "Nom affiché",
+      "jobTitle": "Titre professionnel",
+      "emailPublic": "E-mail public",
+      "emailLogin": "E-mail de connexion",
+      "phone": "Téléphone",
+      "location": "Localisation",
+      "role": "Rôle",
+      "editPublic": "Modifier le profil public",
+      "loading": "Chargement du profil…"
+    }
+  }
+}

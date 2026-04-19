@@ -60,7 +60,16 @@ export async function seedDatabase() {
       roles: mockAbout.roles,
       timezone: mockAbout.timezone,
       available_status: mockAbout.availableStatus,
-      cv_url: mockAbout.cvUrl
+      cv_url: mockAbout.cvUrl,
+      hero_badge: mockAbout.heroBadge ?? null,
+      home_available_title: mockAbout.homeAvailableTitle ?? null,
+      home_available_subtitle: mockAbout.homeAvailableSubtitle ?? null,
+      home_stat_years: mockAbout.homeStatYears ?? 8,
+      home_stat_projects: mockAbout.homeStatProjects ?? 15,
+      home_stat_clients: mockAbout.homeStatClients ?? 12,
+      home_stat_satisfaction: mockAbout.homeStatSatisfaction ?? 100,
+      whatsapp_url: mockAbout.whatsappUrl ?? null,
+      telegram_url: mockAbout.telegramUrl ?? null,
     });
   if (aboutError) console.error('Error seeding about:', aboutError);
 
@@ -110,7 +119,8 @@ export async function seedDatabase() {
     .insert(mockSkills.map(s => ({
       name: s.name,
       level: s.level,
-      category: s.category
+      category: s.category,
+      icon_name: s.iconName?.trim() || null,
     })));
   if (skillsError) console.error('Error seeding skills:', skillsError);
 

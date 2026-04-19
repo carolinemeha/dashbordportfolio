@@ -7,31 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { dataService, Education } from '@/lib/data';
 import { Plus, Edit, Trash2, GraduationCap, Calendar, MapPin, Building } from 'lucide-react';
 import EducationForm from '../../../components/admin/EducationForm';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { 
-      type: "spring", 
-      stiffness: 300, 
-      damping: 24 
-    } 
-  },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
-};
+import { motion, AnimatePresence } from 'framer-motion';
+import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
+import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
+import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 
 export default function EducationPage() {
+  const { t } = useAdminI18n();
   const [education, setEducation] = useState<Education[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<Education | null>(null);
@@ -64,7 +46,7 @@ export default function EducationPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
+    if (confirm(t('confirm.deleteEducation'))) {
       const success = await dataService.deleteEducation(id);
       if (success) {
         setEducation(education.filter(e => e.id !== id));
@@ -87,55 +69,42 @@ export default function EducationPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-foreground">
-        <div>
-          <motion.h1 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } } as any}
-            className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
-          >
-            Éducation
-          </motion.h1>
-          <motion.p 
-            {...{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, transition: { delay: 0.1 } } as any}
-            className="mt-2 text-sm text-muted-foreground"
-          >
-            Gérez vos formations, diplômes et certifications
-          </motion.p>
-        </div>
-        <motion.div {...{ initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } as any}>
-          <Button onClick={() => setIsFormOpen(true)} className="shadow-lg hover:shadow-primary/25 transition-all">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle formation
-          </Button>
-        </motion.div>
-      </div>
+      <AdminPageToolbar>
+        <Button
+          onClick={() => setIsFormOpen(true)}
+          className="rounded-xl shadow-md hover:shadow-primary/20 transition-all"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {t('pages.education.new')}
+        </Button>
+      </AdminPageToolbar>
 
       {education.length === 0 ? (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
           <Card className="glass-card border-dashed border-2 border-border/50 bg-secondary/20">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="p-4 bg-primary/10 rounded-full mb-4">
                 <GraduationCap className="h-12 w-12 text-primary/60" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Aucune formation</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm">Commencez par ajouter votre parcours académique pour construire votre profil.</p>
+              <h3 className="text-xl font-semibold text-foreground mb-2">{t('pages.education.emptyTitle')}</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm">{t('pages.education.emptyDesc')}</p>
               <Button onClick={() => setIsFormOpen(true)} size="lg">
                 <Plus className="h-4 w-4 mr-2" />
-                Ajouter une formation
+                {t('pages.education.add')}
               </Button>
             </CardContent>
           </Card>
         </motion.div>
       ) : (
         <motion.div 
-          variants={containerVariants}
-          initial="hidden"
+          variants={adminStaggerContainer}
+          initial={false}
           animate="show"
           className="space-y-6"
         >
           <AnimatePresence>
             {sortedEducation.map((edu) => (
-              <motion.div key={edu.id} variants={itemVariants} exit="exit" layout>
+              <motion.div key={edu.id} variants={adminStaggerItemExit} exit="exit" layout>
                 <Card className="glass-card overflow-hidden hover:border-primary/30 transition-all duration-300 hover:shadow-xl relative text-foreground">
                   <CardHeader className="pb-3 bg-secondary/10 border-b border-border/30">
                     <div className="flex items-start justify-between">
@@ -169,7 +138,7 @@ export default function EducationPage() {
                     
                     {edu.courses && edu.courses.length > 0 && (
                       <div className="space-y-3">
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cours & Spécialités</h4>
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('pages.education.coursesHeading')}</h4>
                         <div className="flex flex-wrap gap-2">
                           {edu.courses.map((course, idx) => (
                             <Badge key={idx} variant="outline" className="bg-background/50 text-xs font-normal border-border/40">
@@ -190,10 +159,7 @@ export default function EducationPage() {
       {isFormOpen && (
         <EducationForm
           education={editingEducation}
-          onSave={editingEducation ? 
-            (updates) => handleUpdate(editingEducation.id, updates) : 
-            handleCreate
-          }
+          onSave={editingEducation ? (updates) => handleUpdate(updates) : handleCreate}
           onCancel={closeForm}
         />
       )}

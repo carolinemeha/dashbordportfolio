@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,8 @@ import { Project } from '@/lib/data';
 import { X, FolderOpen, Link as LinkIcon, Github, Calendar, Tag, Activity, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageUpload from './ImageUpload';
+import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { projectCategoryLabel } from '@/lib/admin-ui-labels';
 
 interface ProjectFormProps {
   project?: Project | null;
@@ -20,21 +22,29 @@ interface ProjectFormProps {
   onCancel: () => void;
 }
 
+const emptyForm = (project?: Project | null) => ({
+  title: project?.title ?? '',
+  description: project?.description ?? '',
+  image: project?.image ?? '',
+  demo: project?.demo ?? '',
+  github: project?.github ?? '',
+  technologies: project?.technologies ?? [],
+  category: project?.category ?? 'fullstack',
+  status: project?.status ?? 'completed',
+  date: project?.date ?? new Date().toISOString().split('T')[0].substring(0, 7),
+  featured: project?.featured ?? false,
+});
+
 export default function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
-  const [formData, setFormData] = useState({
-    title: project?.title || '',
-    description: project?.description || '',
-    image: project?.image || '',
-    demo: project?.demo || '',
-    github: project?.github || '',
-    technologies: project?.technologies || [],
-    category: project?.category || 'fullstack',
-    status: project?.status || 'completed',
-    date: project?.date || new Date().toISOString().split('T')[0].substring(0, 7), // YYYY-MM
-    featured: project?.featured || false,
-  });
+  const { t } = useAdminI18n();
+  const [formData, setFormData] = useState(() => emptyForm(project));
 
   const [newTech, setNewTech] = useState('');
+
+  useEffect(() => {
+    setFormData(emptyForm(project));
+    setNewTech('');
+  }, [project]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,35 +69,40 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
   };
 
   return (
-    <Dialog open={true} onOpenChange={onCancel}>
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+    >
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden glass-card border-border/50">
         <DialogHeader className="pb-4 border-b border-border/40">
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <FolderOpen className="h-6 w-6 text-primary" />
-            {project ? 'Modifier le projet' : 'Nouveau projet'}
+            {project ? t('forms.project.titleEdit') : t('forms.project.titleNew')}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {project ? 'Modifiez les informations de ce projet pour les tenir à jour.' : 'Détaillez votre réalisation pour l\'ajouter à votre vitrine.'}
+            {project ? t('forms.project.descEdit') : t('forms.project.descNew')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-foreground">Titre du projet <span className="text-destructive">*</span></Label>
+              <Label htmlFor="title" className="text-foreground">{t('forms.project.projectTitle')} <span className="text-destructive">*</span></Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder="Ex: Refonte E-commerce"
+                placeholder={t('forms.project.titlePh')}
                 required
               />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="date" className="text-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" /> Date (ex: YYYY-MM) <span className="text-destructive">*</span>
+                <Calendar className="h-4 w-4 text-muted-foreground" /> {t('forms.project.date')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="date"
@@ -103,46 +118,47 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="category" className="text-foreground flex items-center gap-2">
-                 <LayoutGrid className="h-4 w-4 text-muted-foreground" /> Catégorie <span className="text-destructive">*</span>
+                 <LayoutGrid className="h-4 w-4 text-muted-foreground" /> {t('forms.project.category')} <span className="text-destructive">*</span>
               </Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
                 <SelectTrigger className="bg-secondary/30 border-border/50">
-                  <SelectValue placeholder="Sélectionnez une catégorie" />
+                  <SelectValue placeholder={t('forms.shared.selectCategory')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="frontend">Frontend</SelectItem>
-                  <SelectItem value="fullstack">Fullstack</SelectItem>
-                  <SelectItem value="ui-ux">UI/UX Design</SelectItem>
-                  <SelectItem value="design">Design Graphique</SelectItem>
-                  <SelectItem value="logo">Logo / Branding</SelectItem>
+                  <SelectItem value="frontend">{projectCategoryLabel('frontend', t)}</SelectItem>
+                  <SelectItem value="fullstack">{projectCategoryLabel('fullstack', t)}</SelectItem>
+                  <SelectItem value="ui-ux">{projectCategoryLabel('ui-ux', t)}</SelectItem>
+                  <SelectItem value="design">{projectCategoryLabel('design', t)}</SelectItem>
+                  <SelectItem value="logo">{projectCategoryLabel('logo', t)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="status" className="text-foreground flex items-center gap-2">
-                 <Activity className="h-4 w-4 text-muted-foreground" /> Statut <span className="text-destructive">*</span>
+                 <Activity className="h-4 w-4 text-muted-foreground" /> {t('forms.project.status')} <span className="text-destructive">*</span>
               </Label>
               <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
                 <SelectTrigger className="bg-secondary/30 border-border/50">
-                  <SelectValue placeholder="Sélectionnez un statut" />
+                  <SelectValue placeholder={t('forms.shared.selectStatus')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="completed">Terminé</SelectItem>
-                  <SelectItem value="in-progress">En cours</SelectItem>
+                  <SelectItem value="completed">{t('forms.project.statusDone')}</SelectItem>
+                  <SelectItem value="in-progress">{t('forms.project.statusProgress')}</SelectItem>
+                  <SelectItem value="planned">{t('forms.project.statusPlanned')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-foreground">Description <span className="text-destructive">*</span></Label>
+            <Label htmlFor="description" className="text-foreground">{t('forms.project.description')} <span className="text-destructive">*</span></Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y min-h-[100px]"
-              placeholder="Décrivez les objectifs, défis et résultats du projet..."
+              placeholder={t('forms.project.descPh')}
               rows={3}
               required
             />
@@ -150,21 +166,24 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
 
           <div className="space-y-2">
             <ImageUpload
-              label="Image de couverture"
+              label={t('forms.project.coverImage')}
               value={formData.image}
               onChange={(url) => setFormData({ ...formData, image: url })}
               path="work"
+              successMessage={t('imageUpload.coverSuccess')}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="demo" className="text-foreground flex items-center gap-2">
-                <LinkIcon className="h-4 w-4 text-muted-foreground" /> URL du site (Démo)
+                <LinkIcon className="h-4 w-4 text-muted-foreground" /> {t('forms.project.demoUrl')}
               </Label>
               <Input
                 id="demo"
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="url"
                 value={formData.demo}
                 onChange={(e) => setFormData({ ...formData, demo: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
@@ -173,11 +192,13 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
             </div>
             <div className="space-y-2">
               <Label htmlFor="github" className="text-foreground flex items-center gap-2">
-                <Github className="h-4 w-4 text-muted-foreground" /> URL Git/Source
+                <Github className="h-4 w-4 text-muted-foreground" /> {t('forms.project.githubUrl')}
               </Label>
               <Input
                 id="github"
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="url"
                 value={formData.github}
                 onChange={(e) => setFormData({ ...formData, github: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
@@ -188,18 +209,18 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
 
           <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
             <Label className="text-foreground flex items-center gap-2">
-              <Tag className="h-4 w-4 text-muted-foreground" /> Stack & Technologies
+              <Tag className="h-4 w-4 text-muted-foreground" /> {t('forms.project.stack')}
             </Label>
             <div className="flex space-x-2">
               <Input
                 value={newTech}
                 onChange={(e) => setNewTech(e.target.value)}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 flex-1"
-                placeholder="Appuyez sur Entrée pour ajouter..."
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTechnology())}
+                placeholder={t('forms.shared.enterToAdd')}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTechnology(); } }}
               />
               <Button type="button" variant="secondary" onClick={addTechnology}>
-                Ajouter
+                {t('forms.shared.add')}
               </Button>
             </div>
             <div className="flex flex-wrap gap-2 pt-2 min-h-[32px]">
@@ -222,7 +243,7 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
                   </motion.div>
                 ))}
                 {formData.technologies.length === 0 && (
-                  <span className="text-sm text-muted-foreground italic flex items-center">Aucune technologie ajoutée.</span>
+                  <span className="text-sm text-muted-foreground italic flex items-center">{t('forms.project.noTech')}</span>
                 )}
               </AnimatePresence>
             </div>
@@ -235,15 +256,15 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
               onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
               className="data-[state=checked]:bg-amber-500"
             />
-            <Label htmlFor="featured" className="text-foreground cursor-pointer font-medium">Mettre en vedette (Affiché en priorité)</Label>
+            <Label htmlFor="featured" className="text-foreground cursor-pointer font-medium">{t('forms.project.featured')}</Label>
           </div>
 
           <DialogFooter className="pt-4 border-t border-border/40 sm:justify-end">
             <Button type="button" variant="ghost" onClick={onCancel}>
-              Annuler
+              {t('forms.shared.cancel')}
             </Button>
             <Button type="submit" className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25">
-              {project ? 'Enregistrer les modifications' : 'Créer le projet'}
+              {project ? t('forms.shared.saveChanges') : t('forms.project.create')}
             </Button>
           </DialogFooter>
         </form>

@@ -12,6 +12,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import IconRenderer from './IconRenderer';
+import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { serviceFormCategoryLabel } from '@/lib/admin-ui-labels';
 
 interface ServiceFormProps {
   service?: Service | null;
@@ -20,6 +22,7 @@ interface ServiceFormProps {
 }
 
 export default function ServiceForm({ service, onSave, onCancel }: ServiceFormProps) {
+  const { t } = useAdminI18n();
   const [formData, setFormData] = useState<Omit<Service, 'id'>>({
     title: '',
     description: '',
@@ -79,12 +82,25 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
   };
 
   const addTech = () => {
-    if (newTech.trim() && !formData.technologies?.some(t => t.name === newTech.trim())) {
+    // Si l'utilisateur saisit uniquement l'icône (ex: 'react'), on s'en sert comme nom, et inversement
+    let techName = newTech.trim();
+    let techIcon = newTechIcon.trim();
+
+    if (!techName && techIcon) {
+      // Déduit le nom à partir de l'icône (enlève fa/si et la première lettre majuscule)
+      techName = techIcon.replace(/^(fa|si|Fa|Si)/, '');
+      techName = techName.charAt(0).toUpperCase() + techName.slice(1);
+    } else if (techName && !techIcon) {
+      // Optionnel : on pourrait deviner l'icône, mais l'IconRenderer s'en charge déjà bien
+      techIcon = techName;
+    }
+
+    if (techName && !formData.technologies?.some(t => t.name.toLowerCase() === techName.toLowerCase())) {
       setFormData({
         ...formData,
         technologies: [...(formData.technologies || []), { 
-          name: newTech.trim(),
-          icon: newTechIcon.trim() || undefined
+          name: techName,
+          icon: techIcon || undefined
         }]
       });
       setNewTech('');
@@ -105,40 +121,40 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
         <DialogHeader className="pb-4 border-b border-border/40">
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <Settings className="h-6 w-6 text-primary" />
-            {service ? 'Modifier le service' : 'Nouveau service'}
+            {service ? t('forms.service.titleEdit') : t('forms.service.titleNew')}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {service ? 'Mettez à jour les détails de ce service.' : 'Décrivez une nouvelle prestation pour vos clients.'}
+            {service ? t('forms.service.descEdit') : t('forms.service.descNew')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-foreground">Titre du service <span className="text-destructive">*</span></Label>
+              <Label htmlFor="title" className="text-foreground">{t('forms.service.serviceTitle')} <span className="text-destructive">*</span></Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder="Ex: Développement Web"
+                placeholder={t('forms.service.titlePh')}
                 required
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="category" className="text-foreground flex items-center gap-2">
-                 <LayoutGrid className="h-4 w-4 text-muted-foreground" /> Catégorie <span className="text-destructive">*</span>
+                 <LayoutGrid className="h-4 w-4 text-muted-foreground" /> {t('forms.service.category')} <span className="text-destructive">*</span>
               </Label>
               <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
                 <SelectTrigger className="bg-secondary/30 border-border/50">
-                  <SelectValue placeholder="Sélectionnez une catégorie" />
+                  <SelectValue placeholder={t('forms.shared.selectCategory')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="web">Développement Web</SelectItem>
-                  <SelectItem value="design">Design & Créativité</SelectItem>
-                  <SelectItem value="mobile">Solutions Mobiles</SelectItem>
-                  <SelectItem value="marketing">Marketing & SEO</SelectItem>
-                   <SelectItem value="web & mobile">Développement Web & Mobile</SelectItem>
+                  <SelectItem value="web">{serviceFormCategoryLabel('web', t)}</SelectItem>
+                  <SelectItem value="design">{serviceFormCategoryLabel('design', t)}</SelectItem>
+                  <SelectItem value="mobile">{serviceFormCategoryLabel('mobile', t)}</SelectItem>
+                  <SelectItem value="marketing">{serviceFormCategoryLabel('marketing', t)}</SelectItem>
+                   <SelectItem value="web & mobile">{serviceFormCategoryLabel('web & mobile', t)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -147,7 +163,7 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="iconName" className="text-foreground flex items-center gap-2">
-                <Settings className="h-4 w-4 text-muted-foreground"/> Nom de l'icône (React Icon)
+                <Settings className="h-4 w-4 text-muted-foreground"/> {t('forms.service.iconName')}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -155,62 +171,62 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
                   value={formData.iconName}
                   onChange={(e) => setFormData({ ...formData, iconName: e.target.value })}
                   className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 flex-1"
-                  placeholder="ex: FaCode, SiFigma, FaMobile"
+                  placeholder={t('forms.service.iconPh')}
                 />
                 <div className="w-10 h-10 bg-secondary/30 border border-border/50 rounded flex items-center justify-center text-primary">
                   <IconRenderer iconName={formData.iconName} className="h-5 w-5" />
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground italic">Exemples : FaCode, FaMobile, SiFigma, FaChartLine, FaServer</p>
+              <p className="text-[10px] text-muted-foreground italic">{t('forms.service.iconExamples')}</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-foreground">Description détaillée <span className="text-destructive">*</span></Label>
+            <Label htmlFor="description" className="text-foreground">{t('forms.service.description')} <span className="text-destructive">*</span></Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
               className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y min-h-[100px]"
-              placeholder="Détaillez en quoi consiste ce service..."
+              placeholder={t('forms.service.descPh')}
               required
             />
           </div>
 
           <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
             <Label className="text-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" /> Tarification (Optionnel)
+              <DollarSign className="h-4 w-4 text-muted-foreground" /> {t('forms.service.pricingOptional')}
             </Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
               <div className="space-y-2">
-                <Label htmlFor="price-basic" className="text-xs text-muted-foreground uppercase tracking-wider">Basic</Label>
+                <Label htmlFor="price-basic" className="text-xs text-muted-foreground uppercase tracking-wider">{t('pages.services.tierBasic')}</Label>
                 <Input
                   id="price-basic"
                   value={formData.pricing?.basic}
                   onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, basic: e.target.value } })}
                   className="bg-secondary/30 border-border/50 h-8 text-sm"
-                  placeholder="ex: À partir de 1500€"
+                  placeholder={t('forms.service.pricePhBasic')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price-standard" className="text-xs text-muted-foreground uppercase tracking-wider">Standard</Label>
+                <Label htmlFor="price-standard" className="text-xs text-muted-foreground uppercase tracking-wider">{t('pages.services.tierStandard')}</Label>
                 <Input
                   id="price-standard"
                   value={formData.pricing?.standard}
                   onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, standard: e.target.value } })}
                   className="bg-secondary/30 border-border/50 h-8 text-sm"
-                  placeholder="ex: À partir de 3000€"
+                  placeholder={t('forms.service.pricePhStandard')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price-premium" className="text-xs text-muted-foreground uppercase tracking-wider">Premium</Label>
+                <Label htmlFor="price-premium" className="text-xs text-muted-foreground uppercase tracking-wider">{t('pages.services.tierPremium')}</Label>
                 <Input
                   id="price-premium"
                   value={formData.pricing?.premium}
                   onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, premium: e.target.value } })}
                   className="bg-secondary/30 border-border/50 h-8 text-sm"
-                  placeholder="ex: Sur devis"
+                  placeholder={t('forms.service.pricePhPremium')}
                 />
               </div>
             </div>
@@ -218,24 +234,24 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
 
           <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
             <Label className="text-foreground flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary" /> Fonctionnalités incluses
+              <CheckCircle2 className="h-4 w-4 text-primary" /> {t('forms.service.features')}
             </Label>
             <div className="flex space-x-2">
               <Input
                 value={newFeature}
                 onChange={(e) => setNewFeature(e.target.value)}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 flex-1"
-                placeholder="Ex: Design responsive, Optimisation SEO..."
+                placeholder={t('forms.service.featurePh')}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFeature())}
               />
               <Button type="button" variant="secondary" onClick={handleAddFeature}>
-                Ajouter
+                {t('forms.shared.add')}
               </Button>
             </div>
             
             <div className="pt-2">
               {formData.features.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-2">Aucune fonctionnalité ajoutée.</p>
+                <p className="text-sm text-muted-foreground italic text-center py-2">{t('forms.service.noFeatures')}</p>
               ) : (
                 <ul className="space-y-2">
                   <AnimatePresence>
@@ -271,7 +287,7 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
 
           <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
             <Label className="text-foreground flex items-center gap-2">
-              <Cpu className="h-4 w-4 text-muted-foreground" /> Technologies utilisées
+              <Cpu className="h-4 w-4 text-muted-foreground" /> {t('forms.service.technologies')}
             </Label>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 flex gap-2">
@@ -279,16 +295,16 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
                   value={newTech}
                   onChange={(e) => setNewTech(e.target.value)}
                   className="bg-background border-border/50 focus-visible:ring-primary/50 flex-1"
-                  placeholder="Nom (ex: React)"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTech())}
+                  placeholder={t('forms.service.techNamePh')}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTech(); } }}
                 />
                 <div className="flex-1 flex gap-2">
                   <Input
                     value={newTechIcon}
                     onChange={(e) => setNewTechIcon(e.target.value)}
                     className="bg-background border-border/50 focus-visible:ring-primary/50 flex-1"
-                    placeholder="Icône (ex: SiReact)"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTech())}
+                    placeholder={t('forms.service.techIconPh')}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTech(); } }}
                   />
                   <div className="w-10 h-10 bg-secondary/30 border border-border/50 rounded flex items-center justify-center text-primary shrink-0">
                     <IconRenderer iconName={newTechIcon} className="h-4 w-4" />
@@ -296,10 +312,10 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
                 </div>
               </div>
               <Button type="button" variant="secondary" onClick={addTech} className="shrink-0">
-                Ajouter
+                {t('forms.shared.add')}
               </Button>
             </div>
-            <p className="text-[10px] text-muted-foreground italic px-1">Les icônes commencent souvent par 'Si' (SimpleIcons) ou 'Fa' (FontAwesome). Ex: SiNextdotjs, SiTailwindcss, FaNodeJs</p>
+            <p className="text-[10px] text-muted-foreground italic px-1">{t('forms.service.iconHint')}</p>
             <div className="flex flex-wrap gap-2 pt-2 min-h-[32px]">
               <AnimatePresence>
                 {formData.technologies?.map((tech) => (
@@ -325,10 +341,10 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
 
           <DialogFooter className="pt-4 border-t border-border/40 sm:justify-end">
             <Button type="button" variant="ghost" onClick={onCancel}>
-              Annuler
+              {t('forms.shared.cancel')}
             </Button>
             <Button type="submit" className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25">
-              {service ? 'Enregistrer les modifications' : 'Créer le service'}
+              {service ? t('forms.shared.saveChanges') : t('forms.service.create')}
             </Button>
           </DialogFooter>
         </form>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface AuthGuardProps {
 export default function AuthGuard({ children }: AuthGuardProps) {
   const [isChecking, setIsChecking] = useState(true);
   const router = useRouter();
+  const { t } = useAdminI18n();
 
   useEffect(() => {
     // Le vrai guard est le middleware serveur.
@@ -30,10 +32,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-full min-h-0 flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-          <p className="text-sm text-muted-foreground">Vérification de la session...</p>
+          <p className="text-sm text-muted-foreground">{t('auth.checking')}</p>
         </div>
       </div>
     );
