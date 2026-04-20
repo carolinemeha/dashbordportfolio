@@ -4,12 +4,21 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Education } from '@/lib/data';
 import { GraduationCap, Building, Calendar, BookOpen, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LocaleTextFieldGroup } from '@/components/admin/LocaleTextFieldGroup';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { emptyLocaleText } from '@/lib/locale-text';
+import { BilingualFormHint } from '@/components/admin/BilingualFormHint';
 
 interface EducationFormProps {
   education: Education | null;
@@ -17,13 +26,17 @@ interface EducationFormProps {
   onCancel: () => void;
 }
 
-export default function EducationForm({ education, onSave, onCancel }: EducationFormProps) {
+export default function EducationForm({
+  education,
+  onSave,
+  onCancel,
+}: EducationFormProps) {
   const { t } = useAdminI18n();
   const [formData, setFormData] = useState<Omit<Education, 'id'>>({
-    degree: '',
-    institution: '',
-    duration: '',
-    courses: [],
+    degreeI18n: emptyLocaleText(),
+    institutionI18n: emptyLocaleText(),
+    durationI18n: emptyLocaleText(),
+    coursesI18n: [],
   });
 
   const [newCourse, setNewCourse] = useState('');
@@ -31,10 +44,17 @@ export default function EducationForm({ education, onSave, onCancel }: Education
   useEffect(() => {
     if (education) {
       setFormData({
-        degree: education.degree || '',
-        institution: education.institution || '',
-        duration: education.duration || '',
-        courses: education.courses || [],
+        degreeI18n: education.degreeI18n,
+        institutionI18n: education.institutionI18n,
+        durationI18n: education.durationI18n,
+        coursesI18n: [...education.coursesI18n],
+      });
+    } else {
+      setFormData({
+        degreeI18n: emptyLocaleText(),
+        institutionI18n: emptyLocaleText(),
+        durationI18n: emptyLocaleText(),
+        coursesI18n: [],
       });
     }
   }, [education]);
@@ -45,20 +65,26 @@ export default function EducationForm({ education, onSave, onCancel }: Education
   };
 
   const addCourse = () => {
-    if (newCourse.trim() && !formData.courses.includes(newCourse.trim())) {
+    if (newCourse.trim()) {
       setFormData({
         ...formData,
-        courses: [...formData.courses, newCourse.trim()],
+        coursesI18n: [...formData.coursesI18n, { fr: newCourse.trim(), en: '' }],
       });
       setNewCourse('');
     }
   };
 
-  const removeCourse = (course: string) => {
+  const removeCourseAt = (index: number) => {
     setFormData({
       ...formData,
-      courses: formData.courses.filter((c) => c !== course),
+      coursesI18n: formData.coursesI18n.filter((_, i) => i !== index),
     });
+  };
+
+  const updateCourseAt = (index: number, v: (typeof formData.coursesI18n)[0]) => {
+    const next = [...formData.coursesI18n];
+    next[index] = v;
+    setFormData({ ...formData, coursesI18n: next });
   };
 
   return (
@@ -77,57 +103,61 @@ export default function EducationForm({ education, onSave, onCancel }: Education
           <DialogDescription className="text-muted-foreground">
             {education ? t('forms.education.descEdit') : t('forms.education.descNew')}
           </DialogDescription>
+          <BilingualFormHint />
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="degree" className="text-foreground">
-                {t('forms.education.degree')} <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="degree"
-                value={formData.degree}
-                onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.education.degreePh')}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="institution" className="text-foreground flex items-center gap-2">
-                <Building className="h-4 w-4 text-muted-foreground" /> {t('forms.education.institution')}{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="institution"
-                value={formData.institution}
-                onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.education.institutionPh')}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="duration" className="text-foreground flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" /> {t('forms.education.duration')}{' '}
-              <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="duration"
-              value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-              placeholder={t('forms.education.durationPh')}
-              required
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  {t('forms.education.degree')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.degreeI18n}
+              onChange={(degreeI18n) => setFormData({ ...formData, degreeI18n })}
+              requiredFr
+              inputIdPrefix="edu-degree"
+              placeholderFr={t('forms.education.degreePh')}
+              placeholderEn={t('forms.education.degreePhEn')}
+            />
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  <Building className="h-4 w-4 text-muted-foreground inline mr-1" />
+                  {t('forms.education.institution')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.institutionI18n}
+              onChange={(institutionI18n) =>
+                setFormData({ ...formData, institutionI18n })
+              }
+              requiredFr
+              inputIdPrefix="edu-institution"
+              placeholderFr={t('forms.education.institutionPh')}
+              placeholderEn={t('forms.education.institutionPhEn')}
             />
           </div>
 
+          <LocaleTextFieldGroup
+            label={
+              <>
+                <Calendar className="h-4 w-4 text-muted-foreground inline mr-1" />
+                {t('forms.education.duration')} <span className="text-destructive">*</span>
+              </>
+            }
+            value={formData.durationI18n}
+            onChange={(durationI18n) => setFormData({ ...formData, durationI18n })}
+            requiredFr
+            inputIdPrefix="edu-duration"
+            placeholderFr={t('forms.education.durationPh')}
+            placeholderEn={t('forms.education.durationPhEn')}
+          />
+
           <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
             <Label className="text-foreground flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-muted-foreground" /> {t('forms.education.courses')}
+              <BookOpen className="h-4 w-4 text-muted-foreground" />{' '}
+              {t('forms.education.courses')}
             </Label>
             <div className="flex space-x-2">
               <Input
@@ -146,34 +176,42 @@ export default function EducationForm({ education, onSave, onCancel }: Education
                 {t('forms.shared.add')}
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2 pt-2 min-h-[32px]">
+            <div className="space-y-4 pt-2">
               <AnimatePresence>
-                {formData.courses.map((course) => (
+                {formData.coursesI18n.map((course, index) => (
                   <motion.div
-                    key={course}
-                    initial={{ opacity: 0, scale: 0.8 }}
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    className="relative rounded-lg border border-border/40 bg-background/50 p-3 pr-10"
                   >
-                    <Badge
-                      variant="default"
-                      className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+                    <LocaleTextFieldGroup
+                      label={`${t('forms.education.courses')} ${index + 1}`}
+                      value={course}
+                      onChange={(v) => updateCourseAt(index, v)}
+                      inputIdPrefix={`edu-course-${index}`}
+                      placeholderFr={t('forms.education.courseLinePh')}
+                      placeholderEn={t('forms.education.courseLinePhEn')}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeCourseAt(index)}
+                      aria-label={t('forms.shared.cancel')}
                     >
-                      {course}
-                      <X
-                        className="h-3.5 w-3.5 cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
-                        onClick={() => removeCourse(course)}
-                      />
-                    </Badge>
+                      <X className="h-4 w-4" />
+                    </Button>
                   </motion.div>
                 ))}
-                {formData.courses.length === 0 && (
-                  <span className="text-sm text-muted-foreground italic flex items-center">
-                    {t('forms.education.noCourses')}
-                  </span>
-                )}
               </AnimatePresence>
+              {formData.coursesI18n.length === 0 && (
+                <span className="text-sm text-muted-foreground italic">
+                  {t('forms.education.noCourses')}
+                </span>
+              )}
             </div>
           </div>
 
@@ -181,7 +219,10 @@ export default function EducationForm({ education, onSave, onCancel }: Education
             <Button type="button" variant="ghost" onClick={onCancel}>
               {t('forms.shared.cancel')}
             </Button>
-            <Button type="submit" className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25">
+            <Button
+              type="submit"
+              className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25"
+            >
               {education ? t('forms.shared.saveChanges') : t('forms.education.add')}
             </Button>
           </DialogFooter>

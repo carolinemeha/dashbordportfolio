@@ -20,8 +20,12 @@ import {
   SKILL_REACT_ICON_MAP,
   inferSkillIconKeyFromName,
 } from '@/lib/skill-icons';
+import { LocaleTextFieldGroup } from '@/components/admin/LocaleTextFieldGroup';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 import { skillCategoryLabel } from '@/lib/admin-ui-labels';
+import { emptyLocaleText } from '@/lib/locale-text';
+import { BilingualFormHint } from '@/components/admin/BilingualFormHint';
+import { pickLocalized } from '@/lib/locale-text';
 
 interface SkillFormProps {
   skill?: Skill | null;
@@ -50,7 +54,7 @@ const DEFAULT_ICON = 'FaHtml5';
 export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
   const { t } = useAdminI18n();
   const [formData, setFormData] = useState<Omit<Skill, 'id'>>({
-    name: '',
+    nameI18n: emptyLocaleText(),
     category: 'Frontend',
     level: 0,
     iconName: DEFAULT_ICON,
@@ -59,8 +63,11 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
   useEffect(() => {
     if (skill) {
       const icon = skill.iconName?.trim();
-      const inferred =
-        skill.name ? inferSkillIconKeyFromName(skill.name) : null;
+      const nameForIcon =
+        pickLocalized(skill.nameI18n, 'fr') || pickLocalized(skill.nameI18n, 'en');
+      const inferred = nameForIcon
+        ? inferSkillIconKeyFromName(nameForIcon)
+        : null;
       const validIcon =
         icon && icon in SKILL_REACT_ICON_MAP
           ? icon
@@ -68,14 +75,14 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
             ? inferred
             : DEFAULT_ICON;
       setFormData({
-        name: skill.name || '',
+        nameI18n: skill.nameI18n ?? emptyLocaleText(),
         category: normalizeSkillCategory(skill.category),
-        level: 0,
+        level: typeof skill.level === 'number' ? skill.level : 0,
         iconName: validIcon,
       });
     } else {
       setFormData({
-        name: '',
+        nameI18n: emptyLocaleText(),
         category: 'Frontend',
         level: 0,
         iconName: DEFAULT_ICON,
@@ -86,7 +93,10 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      name: formData.name.trim(),
+      nameI18n: {
+        fr: formData.nameI18n.fr.trim(),
+        en: formData.nameI18n.en.trim(),
+      },
       category: formData.category,
       level: 0,
       iconName: formData.iconName || DEFAULT_ICON,
@@ -109,23 +119,24 @@ export default function SkillForm({ skill, onSave, onCancel }: SkillFormProps) {
           <DialogDescription className="text-muted-foreground">
             {skill ? t('forms.skill.descEdit') : t('forms.skill.descNew')}
           </DialogDescription>
+          <BilingualFormHint />
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-foreground">
-                {t('forms.skill.name')} <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.skill.namePh')}
-                required
-              />
-            </div>
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  {t('forms.skill.name')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.nameI18n}
+              onChange={(nameI18n) => setFormData({ ...formData, nameI18n })}
+              requiredFr
+              inputIdPrefix="skill-name"
+              placeholderFr={t('forms.skill.namePh')}
+              placeholderEn={t('forms.skill.namePhEn')}
+            />
 
             <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
               <Label className="text-foreground flex items-center gap-2">

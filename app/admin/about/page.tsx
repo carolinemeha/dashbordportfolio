@@ -12,6 +12,9 @@ import { Clock, Activity, FileText } from 'lucide-react';
 import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItem } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { pickLocalized } from '@/lib/locale-text';
+import type { AdminLocale } from '@/lib/admin-locale';
+import { toast } from 'sonner';
 
 const HOME_STATS_DEFAULT = {
   years: 8,
@@ -21,18 +24,18 @@ const HOME_STATS_DEFAULT = {
 } as const;
 
 /** Textes effectifs pour l’aperçu « Accueil » (même logique de repli que la vitrine). */
-function aboutHomePreview(about: AboutInfo) {
+function aboutHomePreview(about: AboutInfo, locale: AdminLocale) {
   const pastille =
-    about.heroBadge?.trim() ||
-    about.name?.trim() ||
+    pickLocalized(about.heroBadgeI18n, locale).trim() ||
+    pickLocalized(about.nameI18n, locale).trim() ||
     '—';
 
   const dispoTitle =
-    about.homeAvailableTitle?.trim() ||
-    about.freelanceStatus?.trim() ||
+    pickLocalized(about.homeAvailableTitleI18n, locale).trim() ||
+    pickLocalized(about.freelanceStatusI18n, locale).trim() ||
     '';
-  const dispoSub = about.homeAvailableSubtitle?.trim() || '';
-  const statusFull = about.availableStatus?.trim() || '';
+  const dispoSub = pickLocalized(about.homeAvailableSubtitleI18n, locale).trim() || '';
+  const statusFull = pickLocalized(about.availableStatusI18n, locale).trim() || '';
 
   let title = dispoTitle;
   let subtitle = dispoSub;
@@ -57,8 +60,8 @@ function aboutHomePreview(about: AboutInfo) {
 }
 
 function AboutHomePreviewCard({ about }: { about: AboutInfo }) {
-  const { t } = useAdminI18n();
-  const h = aboutHomePreview(about);
+  const { t, locale } = useAdminI18n();
+  const h = aboutHomePreview(about, locale);
   return (
     <Card className="glass-card border-violet-500/20">
       <CardHeader className="pb-3 border-b border-border/30 bg-violet-500/5">
@@ -113,7 +116,7 @@ function AboutHomePreviewCard({ about }: { about: AboutInfo }) {
 }
 
 export default function AboutPage() {
-  const { t } = useAdminI18n();
+  const { t, locale } = useAdminI18n();
   const [about, setAbout] = useState<AboutInfo | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -127,10 +130,12 @@ export default function AboutPage() {
 
   const handleUpdate = async (updates: Partial<AboutInfo>) => {
     const updatedAbout = await dataService.updateAboutInfo(updates);
-    if (updatedAbout) {
-      setAbout(updatedAbout);
-      setIsFormOpen(false);
+    if (!updatedAbout) {
+      toast.error(t('forms.shared.saveError'));
+      throw new Error('about save failed');
     }
+    setAbout(updatedAbout);
+    setIsFormOpen(false);
   };
 
   const openEditForm = () => {
@@ -180,19 +185,19 @@ export default function AboutPage() {
               <CardContent className="pt-10 flex flex-col items-center text-center relative z-10">
                 <div className="w-24 h-24 rounded-full bg-secondary border-4 border-background shadow-xl flex items-center justify-center mb-4 overflow-hidden relative">
                    {about.avatar ? (
-                     <img src={about.avatar} alt={about.name} className="w-full h-full object-cover" />
+                     <img src={about.avatar} alt={pickLocalized(about.nameI18n, locale)} className="w-full h-full object-cover" />
                    ) : (
                     <User className="h-10 w-10 text-muted-foreground opacity-50" />
                    )}
                 </div>
-                <h2 className="text-2xl font-bold text-foreground">{about.name}</h2>
-                <p className="text-primary font-medium mt-1">{about.title}</p>
+                <h2 className="text-2xl font-bold text-foreground">{pickLocalized(about.nameI18n, locale)}</h2>
+                <p className="text-primary font-medium mt-1">{pickLocalized(about.titleI18n, locale)}</p>
                 
-                {about.roles && about.roles.length > 0 && (
+                {about.rolesI18n.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 justify-center mt-3 px-4">
-                    {about.roles.map((role, idx) => (
+                    {about.rolesI18n.map((role, idx) => (
                       <Badge key={idx} variant="secondary" className="bg-primary/5 text-primary border-primary/20 text-[10px] py-0 px-2">
-                        {role}
+                        {pickLocalized(role, locale)}
                       </Badge>
                     ))}
                   </div>
@@ -225,7 +230,7 @@ export default function AboutPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t('pages.about.location')}</p>
-                      <p className="text-sm font-medium text-foreground/80">{about.location}</p>
+                      <p className="text-sm font-medium text-foreground/80">{pickLocalized(about.locationI18n, locale)}</p>
                     </div>
                   </div>
                 </div>
@@ -246,42 +251,42 @@ export default function AboutPage() {
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{t('pages.about.experience')}</span>
                   </div>
-                  <span className="text-sm font-semibold">{about.experience || "-"}</span>
+                  <span className="text-sm font-semibold">{pickLocalized(about.experienceI18n, locale) || "-"}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3">
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Nationalité</span>
                   </div>
-                  <span className="text-sm font-semibold">{about.nationality || "-"}</span>
+                  <span className="text-sm font-semibold">{pickLocalized(about.nationalityI18n, locale) || "-"}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{t('pages.about.freelance')}</span>
                   </div>
-                  <span className="text-sm font-semibold">{about.freelanceStatus || "-"}</span>
+                  <span className="text-sm font-semibold">{pickLocalized(about.freelanceStatusI18n, locale) || "-"}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{t('pages.about.timezone')}</span>
                   </div>
-                  <span className="text-sm font-semibold">{about.timezone || "-"}</span>
+                  <span className="text-sm font-semibold">{pickLocalized(about.timezoneI18n, locale) || "-"}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3 mb-1">
                     <Activity className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{t('pages.about.availability')}</span>
                   </div>
-                  <p className="text-sm font-semibold pl-7">{about.availableStatus || "-"}</p>
+                  <p className="text-sm font-semibold pl-7">{pickLocalized(about.availableStatusI18n, locale) || "-"}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-secondary/30">
                   <div className="flex items-center space-x-3 mb-1">
                     <Languages className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{t('pages.about.languages')}</span>
                   </div>
-                  <p className="text-sm font-semibold pl-7">{about.languages || "-"}</p>
+                  <p className="text-sm font-semibold pl-7">{pickLocalized(about.languagesI18n, locale) || "-"}</p>
                 </div>
                 {about.cvUrl && (
                   <Button variant="outline" size="sm" className="w-full mt-2 border-primary/20 hover:bg-primary/5 group" asChild>
@@ -374,7 +379,7 @@ export default function AboutPage() {
               <CardContent className="pt-6">
                 <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none">
                   <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                    {about.bio || t('pages.about.noBio')}
+                    {pickLocalized(about.bioI18n, locale) || t('pages.about.noBio')}
                   </p>
                 </div>
               </CardContent>

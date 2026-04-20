@@ -29,7 +29,7 @@ type MeResponse = {
 };
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const { prefs } = useAdminPreferences();
   const { t } = useAdminI18n();
   const [user, setUser] = useState<MeResponse | null>(null);

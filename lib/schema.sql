@@ -200,6 +200,53 @@ CREATE TABLE IF NOT EXISTS admin_console_settings (
 ALTER TABLE admin_console_settings ADD COLUMN IF NOT EXISTS sidebar_logo_url TEXT DEFAULT '';
 ALTER TABLE admin_console_settings ADD COLUMN IF NOT EXISTS preferences_extra JSONB DEFAULT '{}'::jsonb;
 
+-- i18n contenu éditorial (FR/EN) — JSONB `{ "fr": "...", "en": "..." }` ; colonnes TEXT conservées = copie FR pour compat.
+ALTER TABLE about ADD COLUMN IF NOT EXISTS name_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS title_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS bio_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS location_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS experience_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS nationality_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS freelance_status_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS languages_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS available_status_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS timezone_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS hero_badge_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS home_available_title_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS home_available_subtitle_i18n JSONB;
+ALTER TABLE about ADD COLUMN IF NOT EXISTS roles_i18n JSONB;
+
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS title_i18n JSONB;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS description_i18n JSONB;
+
+ALTER TABLE experiences ADD COLUMN IF NOT EXISTS company_i18n JSONB;
+ALTER TABLE experiences ADD COLUMN IF NOT EXISTS position_i18n JSONB;
+ALTER TABLE experiences ADD COLUMN IF NOT EXISTS duration_i18n JSONB;
+ALTER TABLE experiences ADD COLUMN IF NOT EXISTS location TEXT;
+ALTER TABLE experiences ADD COLUMN IF NOT EXISTS location_i18n JSONB;
+ALTER TABLE experiences ADD COLUMN IF NOT EXISTS achievements_i18n JSONB;
+
+ALTER TABLE education ADD COLUMN IF NOT EXISTS institution_i18n JSONB;
+ALTER TABLE education ADD COLUMN IF NOT EXISTS degree_i18n JSONB;
+ALTER TABLE education ADD COLUMN IF NOT EXISTS duration_i18n JSONB;
+ALTER TABLE education ADD COLUMN IF NOT EXISTS courses_i18n JSONB;
+
+ALTER TABLE skills ADD COLUMN IF NOT EXISTS name_i18n JSONB;
+
+ALTER TABLE services ADD COLUMN IF NOT EXISTS title_i18n JSONB;
+ALTER TABLE services ADD COLUMN IF NOT EXISTS description_i18n JSONB;
+ALTER TABLE services ADD COLUMN IF NOT EXISTS features_i18n JSONB;
+
+ALTER TABLE testimonials ADD COLUMN IF NOT EXISTS name_i18n JSONB;
+ALTER TABLE testimonials ADD COLUMN IF NOT EXISTS role_i18n JSONB;
+ALTER TABLE testimonials ADD COLUMN IF NOT EXISTS content_i18n JSONB;
+
+ALTER TABLE certifications ADD COLUMN IF NOT EXISTS title_i18n JSONB;
+ALTER TABLE certifications ADD COLUMN IF NOT EXISTS issuer_i18n JSONB;
+
+-- Données existantes : copier les colonnes TEXT / TEXT[] vers *_i18n (FR + EN vide).
+-- Exécuter une fois sur une base déjà peuplée : lib/migrations/backfill_i18n_from_legacy.sql
+
 -- Désactivation RLS pour l'administration simplifiée
 ALTER TABLE about DISABLE ROW LEVEL SECURITY;
 ALTER TABLE projects DISABLE ROW LEVEL SECURITY;

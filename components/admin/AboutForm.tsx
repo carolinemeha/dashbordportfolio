@@ -4,15 +4,16 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AboutInfo } from '@/lib/data';
 import { User, Mail, Phone, MapPin, Globe, Github, Linkedin, Twitter, AtSign, Info, Briefcase, Languages, ShoppingBag, Youtube, Tag, X, Clock, Activity, FileText, Upload, Loader2, Sparkles, BarChart3 } from 'lucide-react';
 import ImageUpload from './ImageUpload';
-import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { LocaleTextFieldGroup } from '@/components/admin/LocaleTextFieldGroup';
+import { emptyLocaleText } from '@/lib/locale-text';
+import { BilingualFormHint } from '@/components/admin/BilingualFormHint';
 
 interface AboutFormProps {
   about: AboutInfo | null;
@@ -21,30 +22,30 @@ interface AboutFormProps {
 }
 
 const emptyAboutForm = (): Partial<AboutInfo> => ({
-  name: '',
-  title: '',
-  bio: '',
+  nameI18n: emptyLocaleText(),
+  titleI18n: emptyLocaleText(),
+  bioI18n: emptyLocaleText(),
   avatar: '',
-  roles: [],
-  location: '',
-  timezone: '',
-  availableStatus: '',
+  rolesI18n: [],
+  locationI18n: emptyLocaleText(),
+  timezoneI18n: emptyLocaleText(),
+  availableStatusI18n: emptyLocaleText(),
   email: '',
   phone: '',
-  experience: '',
-  nationality: '',
+  experienceI18n: emptyLocaleText(),
+  nationalityI18n: emptyLocaleText(),
   shopUrl: '',
-  freelanceStatus: '',
-  languages: '',
+  freelanceStatusI18n: emptyLocaleText(),
+  languagesI18n: emptyLocaleText(),
   website: '',
   github: '',
   linkedin: '',
   twitter: '',
   youtube: '',
   cvUrl: '',
-  heroBadge: '',
-  homeAvailableTitle: '',
-  homeAvailableSubtitle: '',
+  heroBadgeI18n: emptyLocaleText(),
+  homeAvailableTitleI18n: emptyLocaleText(),
+  homeAvailableSubtitleI18n: emptyLocaleText(),
   homeStatYears: undefined,
   homeStatProjects: undefined,
   homeStatClients: undefined,
@@ -69,20 +70,33 @@ export default function AboutForm({ about, onSave, onCancel }: AboutFormProps) {
   const cvInputRef = useRef<HTMLInputElement>(null);
 
   const addRole = () => {
-    if (newRole.trim() && !formData.roles?.includes(newRole.trim())) {
+    const fr = newRole.trim();
+    if (
+      fr &&
+      !formData.rolesI18n?.some((r) => r.fr.trim() === fr)
+    ) {
       setFormData({
         ...formData,
-        roles: [...(formData.roles || []), newRole.trim()]
+        rolesI18n: [...(formData.rolesI18n || []), { fr, en: '' }],
       });
       setNewRole('');
     }
   };
 
-  const removeRole = (role: string) => {
+  const removeRoleAt = (index: number) => {
     setFormData({
       ...formData,
-      roles: formData.roles?.filter(r => r !== role)
+      rolesI18n: formData.rolesI18n?.filter((_, i) => i !== index),
     });
+  };
+
+  const updateRoleAt = (
+    index: number,
+    v: NonNullable<AboutInfo['rolesI18n']>[0]
+  ) => {
+    const next = [...(formData.rolesI18n || [])];
+    next[index] = v;
+    setFormData({ ...formData, rolesI18n: next });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,6 +159,7 @@ export default function AboutForm({ about, onSave, onCancel }: AboutFormProps) {
           <DialogDescription className="text-muted-foreground">
             {t('forms.about.description')}
           </DialogDescription>
+          <BilingualFormHint />
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-8 pt-4">
@@ -155,87 +170,93 @@ export default function AboutForm({ about, onSave, onCancel }: AboutFormProps) {
               <Info className="h-5 w-5 text-primary" /> {t('forms.about.sectionBase')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-foreground">{t('forms.about.fullName')} <span className="text-destructive">*</span></Label>
-                <Input
-                  id="name"
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-foreground">{t('forms.about.jobTitle')} <span className="text-destructive">*</span></Label>
-                <Input
-                  id="title"
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder={t('forms.about.jobTitlePh')}
-                  required
-                />
-              </div>
+              <LocaleTextFieldGroup
+                label={
+                  <>
+                    {t('forms.about.fullName')} <span className="text-destructive">*</span>
+                  </>
+                }
+                value={formData.nameI18n ?? emptyLocaleText()}
+                onChange={(nameI18n) => setFormData({ ...formData, nameI18n })}
+                requiredFr
+                inputIdPrefix="about-name"
+                placeholderFr={t('forms.about.fullNamePh')}
+                placeholderEn={t('forms.about.fullNamePhEn')}
+              />
+              <LocaleTextFieldGroup
+                label={
+                  <>
+                    {t('forms.about.jobTitle')} <span className="text-destructive">*</span>
+                  </>
+                }
+                value={formData.titleI18n ?? emptyLocaleText()}
+                onChange={(titleI18n) => setFormData({ ...formData, titleI18n })}
+                requiredFr
+                inputIdPrefix="about-title"
+                placeholderFr={t('forms.about.jobTitlePh')}
+                placeholderEn={t('forms.about.jobTitlePhEn')}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="experience" className="text-foreground flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground"/> {t('forms.about.experience')}
-                </Label>
-                <Input
-                  id="experience"
-                  value={formData.experience || ''}
-                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder={t('forms.about.experiencePh')}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nationality" className="text-foreground flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground"/> {t('forms.about.nationality')}
-                </Label>
-                <Input
-                  id="nationality"
-                  value={formData.nationality || ''}
-                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder={t('forms.about.nationalityPh')}
-                />
-              </div>
+              <LocaleTextFieldGroup
+                label={
+                  <span className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" /> {t('forms.about.experience')}
+                  </span>
+                }
+                value={formData.experienceI18n ?? emptyLocaleText()}
+                onChange={(experienceI18n) => setFormData({ ...formData, experienceI18n })}
+                inputIdPrefix="about-experience"
+                placeholderFr={t('forms.about.experiencePh')}
+                placeholderEn={t('forms.about.experiencePhEn')}
+              />
+              <LocaleTextFieldGroup
+                label={
+                  <span className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" /> {t('forms.about.nationality')}
+                  </span>
+                }
+                value={formData.nationalityI18n ?? emptyLocaleText()}
+                onChange={(nationalityI18n) => setFormData({ ...formData, nationalityI18n })}
+                inputIdPrefix="about-nationality"
+                placeholderFr={t('forms.about.nationalityPh')}
+                placeholderEn={t('forms.about.nationalityPhEn')}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="freelanceStatus" className="text-foreground flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground"/> {t('forms.about.freelanceStatus')}
-                </Label>
-                <Input
-                  id="freelanceStatus"
-                  value={formData.freelanceStatus || ''}
-                  onChange={(e) => setFormData({ ...formData, freelanceStatus: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder={t('forms.about.freelancePh')}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="languages" className="text-foreground flex items-center gap-2">
-                  <Languages className="h-4 w-4 text-muted-foreground"/> {t('forms.about.languages')}
-                </Label>
-                <Input
-                  id="languages"
-                  value={formData.languages || ''}
-                  onChange={(e) => setFormData({ ...formData, languages: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder={t('forms.about.languagesPh')}
-                />
-              </div>
+              <LocaleTextFieldGroup
+                label={
+                  <span className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" /> {t('forms.about.freelanceStatus')}
+                  </span>
+                }
+                value={formData.freelanceStatusI18n ?? emptyLocaleText()}
+                onChange={(freelanceStatusI18n) =>
+                  setFormData({ ...formData, freelanceStatusI18n })
+                }
+                inputIdPrefix="about-freelance"
+                placeholderFr={t('forms.about.freelancePh')}
+                placeholderEn={t('forms.about.freelancePhEn')}
+              />
+              <LocaleTextFieldGroup
+                label={
+                  <span className="flex items-center gap-2">
+                    <Languages className="h-4 w-4 text-muted-foreground" /> {t('forms.about.languages')}
+                  </span>
+                }
+                value={formData.languagesI18n ?? emptyLocaleText()}
+                onChange={(languagesI18n) => setFormData({ ...formData, languagesI18n })}
+                inputIdPrefix="about-languages"
+                placeholderFr={t('forms.about.languagesPh')}
+                placeholderEn={t('forms.about.languagesPhEn')}
+              />
             </div>
 
             <div className="space-y-2">
               <ImageUpload
-                label="Photo de profil"
+                label={t('forms.about.avatarLabel')}
                 value={formData.avatar || ''}
                 onChange={(url) => setFormData({ ...formData, avatar: url })}
                 path="avatars"
@@ -258,22 +279,34 @@ export default function AboutForm({ about, onSave, onCancel }: AboutFormProps) {
                   {t('forms.shared.add')}
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2 pt-2 min-h-[32px]">
+              <div className="space-y-4 pt-2">
                 <AnimatePresence>
-                  {formData.roles?.map((role) => (
+                  {(formData.rolesI18n || []).map((role, index) => (
                     <motion.div
-                      key={role}
-                      initial={{ opacity: 0, scale: 0.8 }}
+                      key={index}
+                      initial={{ opacity: 0, scale: 0.98 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      className="relative rounded-lg border border-border/40 bg-background/50 p-3 pr-10"
                     >
-                      <Badge variant="default" className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
-                        {role}
-                        <X
-                          className="h-3.5 w-3.5 cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
-                          onClick={() => removeRole(role)}
-                        />
-                      </Badge>
+                      <LocaleTextFieldGroup
+                        label={`${t('forms.about.rolesLabel')} ${index + 1}`}
+                        value={role}
+                        onChange={(v) => updateRoleAt(index, v)}
+                        inputIdPrefix={`about-role-${index}`}
+                        placeholderFr={t('forms.about.roleLinePh')}
+                        placeholderEn={t('forms.about.roleLinePhEn')}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeRoleAt(index)}
+                        aria-label={t('forms.shared.cancel')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -288,36 +321,36 @@ export default function AboutForm({ about, onSave, onCancel }: AboutFormProps) {
                 {t('forms.about.homeHelp')}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="heroBadge" className="text-foreground">{t('forms.about.heroBadge')}</Label>
-                  <Input
-                    id="heroBadge"
-                    value={formData.heroBadge || ''}
-                    onChange={(e) => setFormData({ ...formData, heroBadge: e.target.value })}
-                    className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                    placeholder={t('forms.about.heroBadgePh')}
+                <div className="md:col-span-2">
+                  <LocaleTextFieldGroup
+                    label={t('forms.about.heroBadge')}
+                    value={formData.heroBadgeI18n ?? emptyLocaleText()}
+                    onChange={(heroBadgeI18n) => setFormData({ ...formData, heroBadgeI18n })}
+                    inputIdPrefix="about-hero-badge"
+                    placeholderFr={t('forms.about.heroBadgePh')}
+                    placeholderEn={t('forms.about.heroBadgePhEn')}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="homeAvailableTitle" className="text-foreground">{t('forms.about.homeAvailTitle')}</Label>
-                  <Input
-                    id="homeAvailableTitle"
-                    value={formData.homeAvailableTitle || ''}
-                    onChange={(e) => setFormData({ ...formData, homeAvailableTitle: e.target.value })}
-                    className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                    placeholder={t('forms.about.homeAvailTitlePh')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="homeAvailableSubtitle" className="text-foreground">{t('forms.about.homeAvailSub')}</Label>
-                  <Input
-                    id="homeAvailableSubtitle"
-                    value={formData.homeAvailableSubtitle || ''}
-                    onChange={(e) => setFormData({ ...formData, homeAvailableSubtitle: e.target.value })}
-                    className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                    placeholder={t('forms.about.homeAvailSubPh')}
-                  />
-                </div>
+                <LocaleTextFieldGroup
+                  label={t('forms.about.homeAvailTitle')}
+                  value={formData.homeAvailableTitleI18n ?? emptyLocaleText()}
+                  onChange={(homeAvailableTitleI18n) =>
+                    setFormData({ ...formData, homeAvailableTitleI18n })
+                  }
+                  inputIdPrefix="about-home-avail-title"
+                  placeholderFr={t('forms.about.homeAvailTitlePh')}
+                  placeholderEn={t('forms.about.homeAvailTitlePhEn')}
+                />
+                <LocaleTextFieldGroup
+                  label={t('forms.about.homeAvailSub')}
+                  value={formData.homeAvailableSubtitleI18n ?? emptyLocaleText()}
+                  onChange={(homeAvailableSubtitleI18n) =>
+                    setFormData({ ...formData, homeAvailableSubtitleI18n })
+                  }
+                  inputIdPrefix="about-home-avail-sub"
+                  placeholderFr={t('forms.about.homeAvailSubPh')}
+                  placeholderEn={t('forms.about.homeAvailSubPhEn')}
+                />
               </div>
               <div className="space-y-3">
                 <Label className="text-foreground flex items-center gap-2">
@@ -379,44 +412,48 @@ export default function AboutForm({ about, onSave, onCancel }: AboutFormProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="timezone" className="text-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground"/> Fuseau Horaire
-                </Label>
-                <Input
-                  id="timezone"
-                  value={formData.timezone || ''}
-                  onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder="Ex: GMT+1 (Benin Time)"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="availableStatus" className="text-foreground flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-muted-foreground"/> Statut de Disponibilité
-                </Label>
-                <Input
-                  id="availableStatus"
-                  value={formData.availableStatus || ''}
-                  onChange={(e) => setFormData({ ...formData, availableStatus: e.target.value })}
-                  className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                  placeholder="Ex: Disponible pour de nouveaux projets"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio" className="text-foreground">Biographie / À propos <span className="text-destructive">*</span></Label>
-              <Textarea
-                id="bio"
-                value={formData.bio || ''}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                rows={5}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y"
-                placeholder="Présentez-vous en quelques lignes..."
-                required
+              <LocaleTextFieldGroup
+                label={
+                  <span className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" /> {t('forms.about.timezone')}
+                  </span>
+                }
+                value={formData.timezoneI18n ?? emptyLocaleText()}
+                onChange={(timezoneI18n) => setFormData({ ...formData, timezoneI18n })}
+                inputIdPrefix="about-timezone"
+                placeholderFr={t('forms.about.timezonePh')}
+                placeholderEn={t('forms.about.timezonePhEn')}
+              />
+              <LocaleTextFieldGroup
+                label={
+                  <span className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-muted-foreground" /> {t('forms.about.availStatus')}
+                  </span>
+                }
+                value={formData.availableStatusI18n ?? emptyLocaleText()}
+                onChange={(availableStatusI18n) =>
+                  setFormData({ ...formData, availableStatusI18n })
+                }
+                inputIdPrefix="about-available"
+                placeholderFr={t('forms.about.availStatusPh')}
+                placeholderEn={t('forms.about.availStatusPhEn')}
               />
             </div>
+
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  {t('forms.about.bio')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.bioI18n ?? emptyLocaleText()}
+              onChange={(bioI18n) => setFormData({ ...formData, bioI18n })}
+              requiredFr
+              multiline
+              inputIdPrefix="about-bio"
+              placeholderFr={t('forms.about.bioPh')}
+              placeholderEn={t('forms.about.bioPhEn')}
+            />
             
             <div className="space-y-2">
               <Label htmlFor="cvUrl" className="text-foreground flex items-center gap-2">
@@ -498,18 +535,18 @@ export default function AboutForm({ about, onSave, onCancel }: AboutFormProps) {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location" className="text-foreground flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground"/> {t('forms.about.location')}
-                </Label>
-                <Input
-                  id="location"
-                  value={formData.location || ''}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="bg-background border-border/50 focus-visible:ring-primary/50"
-                  placeholder={t('forms.about.locationPh')}
-                />
-              </div>
+              <LocaleTextFieldGroup
+                label={
+                  <span className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> {t('forms.about.location')}
+                  </span>
+                }
+                value={formData.locationI18n ?? emptyLocaleText()}
+                onChange={(locationI18n) => setFormData({ ...formData, locationI18n })}
+                inputIdPrefix="about-location"
+                placeholderFr={t('forms.about.locationPh')}
+                placeholderEn={t('forms.about.locationPhEn')}
+              />
             </div>
           </div>
 

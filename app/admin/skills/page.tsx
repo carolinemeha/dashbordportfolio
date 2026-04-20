@@ -12,6 +12,8 @@ import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItem } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 import { skillCategoryLabel } from '@/lib/admin-ui-labels';
+import { pickLocalized } from '@/lib/locale-text';
+import { toast } from 'sonner';
 
 /** Même ordre que le CV public (`resume-fr.jsx` / `resume-en.jsx`). */
 const SKILL_CATEGORY_ORDER: Skill['category'][] = [
@@ -50,7 +52,7 @@ const iconBoxClassName =
   'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/[0.09] text-primary transition-colors duration-200 group-hover:border-primary/35 group-hover:bg-primary/[0.14] [&_svg]:block [&_svg]:h-[1.35rem] [&_svg]:w-[1.35rem]';
 
 export default function SkillsPage() {
-  const { t } = useAdminI18n();
+  const { t, locale } = useAdminI18n();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
@@ -65,21 +67,25 @@ export default function SkillsPage() {
 
   const handleCreate = async (skillData: Omit<Skill, 'id'>) => {
     const newSkill = await dataService.createSkill(skillData);
-    if (newSkill) {
-      const refreshedData = await dataService.getSkills();
-      setSkills(refreshedData);
-      setIsFormOpen(false);
+    if (!newSkill) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getSkills();
+    setSkills(refreshedData);
+    setIsFormOpen(false);
   };
 
   const handleUpdate = async (id: string, updates: Partial<Skill>) => {
     const updated = await dataService.updateSkill(id, updates);
-    if (updated) {
-      const refreshedData = await dataService.getSkills();
-      setSkills(refreshedData);
-      setEditingSkill(null);
-      setIsFormOpen(false);
+    if (!updated) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getSkills();
+    setSkills(refreshedData);
+    setEditingSkill(null);
+    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -206,9 +212,10 @@ export default function SkillsPage() {
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       <AnimatePresence>
                         {categorySkills.map((skill) => {
+                          const nameShown = pickLocalized(skill.nameI18n, locale);
                           const SkillIcon = getSkillIconComponent(
                             skill.iconName,
-                            skill.name
+                            nameShown
                           );
                           return (
                           <motion.div
@@ -225,7 +232,7 @@ export default function SkillsPage() {
                             </span>
                             <div className="min-w-0 flex-1">
                               <span className="block text-sm font-semibold leading-snug text-foreground">
-                                {skill.name}
+                                {nameShown}
                               </span>
                             </div>
                             <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-0.5 rounded-lg border border-border/40 bg-background/90 p-0.5 shadow-sm backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100">
@@ -234,7 +241,7 @@ export default function SkillsPage() {
                                 size="icon"
                                 onClick={() => openEditForm(skill)}
                                 className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                aria-label={t('pages.skills.editSkill', { name: skill.name })}
+                                aria-label={t('pages.skills.editSkill', { name: nameShown })}
                               >
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
@@ -243,7 +250,7 @@ export default function SkillsPage() {
                                 size="icon"
                                 onClick={() => handleDelete(skill.id)}
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                aria-label={t('pages.skills.deleteSkill', { name: skill.name })}
+                                aria-label={t('pages.skills.deleteSkill', { name: nameShown })}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>

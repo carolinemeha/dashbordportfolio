@@ -11,9 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { pickLocalized } from '@/lib/locale-text';
+import { toast } from 'sonner';
 
 export default function ExperiencesPage() {
-  const { t } = useAdminI18n();
+  const { t, locale } = useAdminI18n();
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExperience, setEditingExperience] = useState<Experience | null>(null);
@@ -28,21 +30,25 @@ export default function ExperiencesPage() {
 
   const handleCreate = async (experienceData: Omit<Experience, 'id'>) => {
     const newExperience = await dataService.createExperience(experienceData);
-    if (newExperience) {
-      const refreshedData = await dataService.getExperiences();
-      setExperiences(refreshedData);
-      setIsFormOpen(false);
+    if (!newExperience) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getExperiences();
+    setExperiences(refreshedData);
+    setIsFormOpen(false);
   };
 
   const handleUpdate = async (id: string, updates: Partial<Experience>) => {
     const updated = await dataService.updateExperience(id, updates);
-    if (updated) {
-      const refreshedData = await dataService.getExperiences();
-      setExperiences(refreshedData);
-      setEditingExperience(null);
-      setIsFormOpen(false);
+    if (!updated) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getExperiences();
+    setExperiences(refreshedData);
+    setEditingExperience(null);
+    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -101,7 +107,11 @@ export default function ExperiencesPage() {
           className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border/50 before:to-transparent"
         >
           <AnimatePresence>
-            {experiences.map((experience) => (
+            {experiences.map((experience) => {
+              const positionShown = pickLocalized(experience.positionI18n, locale);
+              const companyShown = pickLocalized(experience.companyI18n, locale);
+              const durationShown = pickLocalized(experience.durationI18n, locale);
+              return (
               <motion.div key={experience.id} variants={adminStaggerItemExit} exit="exit" layout className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                 {/* Timeline Icon */}
                 <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-primary/20 text-primary shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow md:mx-auto relative z-10 box-content transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
@@ -114,8 +124,8 @@ export default function ExperiencesPage() {
                     <CardHeader className="pb-3 bg-secondary/10 border-b border-border/30">
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle className="text-lg text-foreground">{experience.position}</CardTitle>
-                          <CardDescription className="font-medium text-primary/80 mt-1">{experience.company}</CardDescription>
+                          <CardTitle className="text-lg text-foreground">{positionShown}</CardTitle>
+                          <CardDescription className="font-medium text-primary/80 mt-1">{companyShown}</CardDescription>
                         </div>
                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border/50 rounded-lg p-0.5 shadow-sm">
                           <Button variant="ghost" size="icon" onClick={() => openEditForm(experience)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
@@ -130,14 +140,14 @@ export default function ExperiencesPage() {
                     <CardContent className="pt-4 space-y-4">
                       <div className="flex items-center text-xs font-medium text-muted-foreground bg-secondary/40 w-fit px-2.5 py-1 rounded-md border border-border/30">
                         <Calendar className="h-3.5 w-3.5 mr-1.5 opacity-70" />
-                        <span>{experience.duration}</span>
+                        <span>{durationShown}</span>
                       </div>
                       <div className="text-sm text-foreground/80 space-y-1 mt-2">
-                         {experience.achievements && experience.achievements.length > 0 ? (
-                           experience.achievements.map((ach, idx) => (
+                         {experience.achievementsI18n.length > 0 ? (
+                           experience.achievementsI18n.map((ach, idx) => (
                              <div key={idx} className="flex items-start gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                <span>{ach}</span>
+                                <span>{pickLocalized(ach, locale)}</span>
                              </div>
                            ))
                          ) : (
@@ -158,7 +168,8 @@ export default function ExperiencesPage() {
                   </Card>
                 </div>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         </motion.div>
       )}

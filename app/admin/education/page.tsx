@@ -11,9 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { pickLocalized } from '@/lib/locale-text';
+import { toast } from 'sonner';
 
 export default function EducationPage() {
-  const { t } = useAdminI18n();
+  const { t, locale } = useAdminI18n();
   const [education, setEducation] = useState<Education[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<Education | null>(null);
@@ -28,21 +30,24 @@ export default function EducationPage() {
 
   const handleCreate = async (educationItem: Omit<Education, 'id'>) => {
     const newItem = await dataService.createEducation(educationItem);
-    if (newItem) {
-      setEducation([newItem, ...education]);
-      setIsFormOpen(false);
+    if (!newItem) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    setEducation([newItem, ...education]);
+    setIsFormOpen(false);
   };
 
   const handleUpdate = async (educationItem: Omit<Education, 'id'>) => {
-    if (editingEducation) {
-      const updated = await dataService.updateEducation(editingEducation.id, educationItem);
-      if (updated) {
-        setEducation(education.map(e => e.id === editingEducation.id ? updated : e));
-      }
-      setEditingEducation(null);
-      setIsFormOpen(false);
+    if (!editingEducation) return;
+    const updated = await dataService.updateEducation(editingEducation.id, educationItem);
+    if (!updated) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    setEducation(education.map((e) => (e.id === editingEducation.id ? updated : e)));
+    setEditingEducation(null);
+    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -103,7 +108,11 @@ export default function EducationPage() {
           className="space-y-6"
         >
           <AnimatePresence>
-            {sortedEducation.map((edu) => (
+            {sortedEducation.map((edu) => {
+              const degreeShown = pickLocalized(edu.degreeI18n, locale);
+              const institutionShown = pickLocalized(edu.institutionI18n, locale);
+              const durationShown = pickLocalized(edu.durationI18n, locale);
+              return (
               <motion.div key={edu.id} variants={adminStaggerItemExit} exit="exit" layout>
                 <Card className="glass-card overflow-hidden hover:border-primary/30 transition-all duration-300 hover:shadow-xl relative text-foreground">
                   <CardHeader className="pb-3 bg-secondary/10 border-b border-border/30">
@@ -113,10 +122,10 @@ export default function EducationPage() {
                           <GraduationCap className="h-6 w-6" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg text-foreground">{edu.degree}</CardTitle>
+                          <CardTitle className="text-lg text-foreground">{degreeShown}</CardTitle>
                           <CardDescription className="font-medium text-primary/80 mt-1 flex items-center gap-1">
                             <Building className="h-3.5 w-3.5" />
-                            {edu.institution}
+                            {institutionShown}
                           </CardDescription>
                         </div>
                       </div>
@@ -133,16 +142,16 @@ export default function EducationPage() {
                   <CardContent className="pt-4 space-y-4">
                     <div className="flex items-center text-sm font-medium text-muted-foreground bg-secondary/40 w-fit px-3 py-1.5 rounded-full border border-border/30">
                       <Calendar className="h-3.5 w-3.5 mr-2 opacity-70" />
-                      <span>{edu.duration}</span>
+                      <span>{durationShown}</span>
                     </div>
                     
-                    {edu.courses && edu.courses.length > 0 && (
+                    {edu.coursesI18n.length > 0 && (
                       <div className="space-y-3">
                         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('pages.education.coursesHeading')}</h4>
                         <div className="flex flex-wrap gap-2">
-                          {edu.courses.map((course, idx) => (
+                          {edu.coursesI18n.map((course, idx) => (
                             <Badge key={idx} variant="outline" className="bg-background/50 text-xs font-normal border-border/40">
-                              {course}
+                              {pickLocalized(course, locale)}
                             </Badge>
                           ))}
                         </div>
@@ -151,7 +160,8 @@ export default function EducationPage() {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         </motion.div>
       )}

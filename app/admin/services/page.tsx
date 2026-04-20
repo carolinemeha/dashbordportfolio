@@ -14,9 +14,11 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { pickLocalized } from '@/lib/locale-text';
+import { toast } from 'sonner';
 
 export default function ServicesPage() {
-  const { t } = useAdminI18n();
+  const { t, locale } = useAdminI18n();
   const [services, setServices] = useState<Service[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -31,21 +33,25 @@ export default function ServicesPage() {
 
   const handleCreate = async (serviceData: Omit<Service, 'id'>) => {
     const newService = await dataService.createService(serviceData);
-    if (newService) {
-      const refreshedData = await dataService.getServices();
-      setServices(refreshedData);
-      setIsFormOpen(false);
+    if (!newService) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getServices();
+    setServices(refreshedData);
+    setIsFormOpen(false);
   };
 
   const handleUpdate = async (id: string, updates: Partial<Service>) => {
     const updated = await dataService.updateService(id, updates);
-    if (updated) {
-      const refreshedData = await dataService.getServices();
-      setServices(refreshedData);
-      setEditingService(null);
-      setIsFormOpen(false);
+    if (!updated) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getServices();
+    setServices(refreshedData);
+    setEditingService(null);
+    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -104,7 +110,10 @@ export default function ServicesPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           <AnimatePresence>
-            {services.map((service) => (
+            {services.map((service) => {
+              const titleShown = pickLocalized(service.titleI18n, locale);
+              const descShown = pickLocalized(service.descriptionI18n, locale);
+              return (
               <motion.div key={service.id} variants={adminStaggerItemExit} exit="exit" layout className="h-full">
                 <Card className="glass-card overflow-hidden group border-border/40 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col relative">
                   
@@ -119,7 +128,7 @@ export default function ServicesPage() {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
-                            <CardTitle className="text-xl font-bold text-foreground m-0">{service.title}</CardTitle>
+                            <CardTitle className="text-xl font-bold text-foreground m-0">{titleShown}</CardTitle>
                             <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-0.5 shadow-sm">
                               <Button variant="ghost" size="icon" onClick={() => openEditForm(service)} className="h-7 w-7 text-muted-foreground hover:text-foreground">
                                 <Edit className="h-3.5 w-3.5" />
@@ -139,18 +148,18 @@ export default function ServicesPage() {
                     </div>
                   </CardHeader>
                     <CardContent className="pt-5 flex-1 flex flex-col z-10 relative">
-                    <p className="text-sm text-foreground/80 leading-relaxed mb-6 flex-1 line-clamp-3">{service.description}</p>
+                    <p className="text-sm text-foreground/80 leading-relaxed mb-6 flex-1 line-clamp-3">{descShown}</p>
                     
-                    {service.features && service.features.length > 0 && (
+                    {service.featuresI18n.length > 0 && (
                       <div className="mb-4">
                         <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 flex items-center gap-2">
                            <CheckCircle2 className="h-3 w-3" /> {t('pages.services.features')}
                         </h4>
                         <ul className="space-y-2">
-                          {service.features.map((feature, index) => (
+                          {service.featuresI18n.map((feature, index) => (
                             <li key={index} className="flex items-start text-sm text-foreground/70 group/feature">
                               <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mr-2 opacity-70 group-hover/feature:opacity-100 transition-opacity mt-0.5" />
-                              <span className="leading-tight">{feature}</span>
+                              <span className="leading-tight">{pickLocalized(feature, locale)}</span>
                             </li>
                           ))}
                         </ul>
@@ -209,7 +218,8 @@ export default function ServicesPage() {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         </motion.div>
       )}

@@ -1,8 +1,20 @@
 import { supabase } from './supabase';
+
+function logSupabase(op: string, err: unknown) {
+  console.error(`[dataService:${op}]`, err);
+}
 import {
   normalizeAdminPreferences,
   type AdminPreferencesV1,
 } from './admin-preferences';
+import type { LocaleText } from './locale-text';
+import {
+  fromDbJson,
+  localeTextArrayFromDb,
+  localeTextArrayToDb,
+  primaryForLegacyColumn,
+  toDbJson,
+} from './locale-text';
 
 /** Ligne unique des préférences console (à créer en base si absente). */
 const ADMIN_CONSOLE_SETTINGS_ID = '00000000-0000-0000-0000-000000000002';
@@ -41,8 +53,8 @@ function parsePreferencesExtra(raw: unknown): Partial<AdminPreferencesV1> {
 
 export interface Project {
   id: string;
-  title: string;
-  description: string;
+  titleI18n: LocaleText;
+  descriptionI18n: LocaleText;
   image: string;
   demo?: string;
   github?: string;
@@ -55,12 +67,54 @@ export interface Project {
   featured?: boolean;
 }
 
-function projectInsertPayload(project: Omit<Project, 'id'>) {
+function dashActivityText(
+  json: unknown,
+  legacy: string | null | undefined
+): string {
+  return primaryForLegacyColumn(fromDbJson(json, legacy), 'fr');
+}
+
+function mapProjectRow(row: Record<string, unknown>): Project {
+  const titleI18n = fromDbJson(row.title_i18n, row.title as string | null);
+  const descriptionI18n = fromDbJson(
+    row.description_i18n,
+    row.description as string | null
+  );
+  return {
+    id: String(row.id ?? ''),
+    titleI18n,
+    descriptionI18n,
+    image: String(row.image ?? ''),
+    demo:
+      row.demo != null
+        ? String(row.demo)
+        : row.demo_url != null
+          ? String(row.demo_url)
+          : undefined,
+    github:
+      row.github != null
+        ? String(row.github)
+        : row.github_url != null
+          ? String(row.github_url)
+          : undefined,
+    technologies: Array.isArray(row.technologies)
+      ? (row.technologies as string[])
+      : [],
+    category: String(row.category ?? 'fullstack'),
+    status: String(row.status ?? 'completed'),
+    date: String(row.date ?? ''),
+    featured: Boolean(row.featured),
+  };
+}
+
+export function projectInsertPayload(project: Omit<Project, 'id'>) {
   const demo = project.demo?.trim() || null;
   const github = project.github?.trim() || null;
   return {
-    title: project.title,
-    description: project.description,
+    title: primaryForLegacyColumn(project.titleI18n, 'fr'),
+    description: primaryForLegacyColumn(project.descriptionI18n, 'fr'),
+    title_i18n: toDbJson(project.titleI18n),
+    description_i18n: toDbJson(project.descriptionI18n),
     image: project.image?.trim() || null,
     demo_url: demo,
     github_url: github,
@@ -74,8 +128,14 @@ function projectInsertPayload(project: Omit<Project, 'id'>) {
 
 function projectUpdatePayload(updates: Partial<Project>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  if (updates.title !== undefined) out.title = updates.title;
-  if (updates.description !== undefined) out.description = updates.description;
+  if (updates.titleI18n !== undefined) {
+    out.title_i18n = toDbJson(updates.titleI18n);
+    out.title = primaryForLegacyColumn(updates.titleI18n, 'fr');
+  }
+  if (updates.descriptionI18n !== undefined) {
+    out.description_i18n = toDbJson(updates.descriptionI18n);
+    out.description = primaryForLegacyColumn(updates.descriptionI18n, 'fr');
+  }
   if (updates.image !== undefined) out.image = updates.image?.trim() || null;
   if (updates.demo !== undefined) out.demo_url = updates.demo?.trim() || null;
   if (updates.github !== undefined) out.github_url = updates.github?.trim() || null;
@@ -89,17 +149,58 @@ function projectUpdatePayload(updates: Partial<Project>): Record<string, unknown
 
 export interface Experience {
   id: string;
-  company: string;
-  position: string;
-  location?: string;
-  duration: string;
-  achievements: string[];
+  companyI18n: LocaleText;
+  positionI18n: LocaleText;
+  locationI18n: LocaleText;
+  durationI18n: LocaleText;
+  achievementsI18n: LocaleText[];
   skills: string[];
+}
+
+function mapExperienceRow(row: Record<string, unknown>): Experience {
+  return {
+    id: String(row.id ?? ''),
+    companyI18n: fromDbJson(row.company_i18n, row.company as string | null),
+    positionI18n: fromDbJson(row.position_i18n, row.position as string | null),
+    locationI18n: fromDbJson(row.location_i18n, row.location as string | null),
+    durationI18n: fromDbJson(row.duration_i18n, row.duration as string | null),
+    achievementsI18n: localeTextArrayFromDb(
+      row.achievements_i18n,
+      row.achievements as string[] | null
+    ),
+    skills: Array.isArray(row.skills) ? (row.skills as string[]) : [],
+  };
+}
+
+export function experienceToDbPayload(e: Partial<Experience>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (e.companyI18n !== undefined) {
+    out.company_i18n = toDbJson(e.companyI18n);
+    out.company = primaryForLegacyColumn(e.companyI18n, 'fr');
+  }
+  if (e.positionI18n !== undefined) {
+    out.position_i18n = toDbJson(e.positionI18n);
+    out.position = primaryForLegacyColumn(e.positionI18n, 'fr');
+  }
+  if (e.locationI18n !== undefined) {
+    out.location_i18n = toDbJson(e.locationI18n);
+    out.location = primaryForLegacyColumn(e.locationI18n, 'fr') || null;
+  }
+  if (e.durationI18n !== undefined) {
+    out.duration_i18n = toDbJson(e.durationI18n);
+    out.duration = primaryForLegacyColumn(e.durationI18n, 'fr');
+  }
+  if (e.achievementsI18n !== undefined) {
+    out.achievements_i18n = localeTextArrayToDb(e.achievementsI18n);
+    out.achievements = e.achievementsI18n.map((a) => primaryForLegacyColumn(a, 'fr'));
+  }
+  if (e.skills !== undefined) out.skills = e.skills;
+  return out;
 }
 
 export interface Skill {
   id: string;
-  name: string;
+  nameI18n: LocaleText;
   /** Conservé en base pour compatibilité ; plus affiché dans l’admin. */
   level: number;
   category: 'Frontend' | 'Backend' | 'Mobile' | 'Design' | 'Commerce' | 'Autres';
@@ -119,7 +220,7 @@ function mapSkillFromRow(row: Record<string, unknown>): Skill {
   ];
   return {
     id: String(row.id),
-    name: String(row.name ?? ''),
+    nameI18n: fromDbJson(row.name_i18n, row.name as string | null),
     level: typeof row.level === 'number' ? row.level : 0,
     category: (cat && valid.includes(cat as Skill['category'])
       ? cat
@@ -129,9 +230,12 @@ function mapSkillFromRow(row: Record<string, unknown>): Skill {
   };
 }
 
-function skillToDbPayload(skill: Partial<Skill>): Record<string, unknown> {
+export function skillToDbPayload(skill: Partial<Skill>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  if (skill.name !== undefined) out.name = skill.name;
+  if (skill.nameI18n !== undefined) {
+    out.name_i18n = toDbJson(skill.nameI18n);
+    out.name = primaryForLegacyColumn(skill.nameI18n, 'fr');
+  }
   if (skill.level !== undefined) out.level = skill.level;
   if (skill.category !== undefined) out.category = skill.category;
   if (skill.iconName !== undefined) out.icon_name = skill.iconName?.trim() || null;
@@ -140,12 +244,12 @@ function skillToDbPayload(skill: Partial<Skill>): Record<string, unknown> {
 
 export interface Service {
   id: string;
-  title: string;
-  description: string;
+  titleI18n: LocaleText;
+  descriptionI18n: LocaleText;
   icon?: string;
   iconName?: string;
   category: string;
-  features: string[];
+  featuresI18n: LocaleText[];
   technologies?: Array<{icon?: string; name: string}>;
   pricing?: {
     basic?: string;
@@ -156,40 +260,37 @@ export interface Service {
 
 export interface Certification {
   id: string;
-  title: string;
-  issuer: string;
+  titleI18n: LocaleText;
+  issuerI18n: LocaleText;
   date: string;
   credential?: string;
 }
 
 export interface AboutInfo {
-  name: string;
-  title: string;
-  bio: string;
+  nameI18n: LocaleText;
+  titleI18n: LocaleText;
+  bioI18n: LocaleText;
   avatar: string;
-  roles?: string[];
-  location: string;
-  timezone?: string;
-  availableStatus?: string;
+  rolesI18n: LocaleText[];
+  locationI18n: LocaleText;
+  timezoneI18n: LocaleText;
+  availableStatusI18n: LocaleText;
   email: string;
   phone: string;
-  experience?: string;
-  nationality?: string;
+  experienceI18n: LocaleText;
+  nationalityI18n: LocaleText;
   shopUrl?: string;
-  freelanceStatus?: string;
-  languages?: string;
+  freelanceStatusI18n: LocaleText;
+  languagesI18n: LocaleText;
   website?: string;
   github?: string;
   linkedin?: string;
   twitter?: string;
   youtube?: string;
   cvUrl?: string;
-  /** Pastille au-dessus du titre (page d’accueil vitrine) */
-  heroBadge?: string;
-  /** Ligne « Disponible » sur l’accueil */
-  homeAvailableTitle?: string;
-  /** Sous-ligne sous la disponibilité */
-  homeAvailableSubtitle?: string;
+  heroBadgeI18n: LocaleText;
+  homeAvailableTitleI18n: LocaleText;
+  homeAvailableSubtitleI18n: LocaleText;
   homeStatYears?: number;
   homeStatProjects?: number;
   homeStatClients?: number;
@@ -200,17 +301,17 @@ export interface AboutInfo {
 
 export interface Education {
   id: string;
-  institution: string;
-  degree: string;
-  duration: string;
-  courses: string[];
+  institutionI18n: LocaleText;
+  degreeI18n: LocaleText;
+  durationI18n: LocaleText;
+  coursesI18n: LocaleText[];
 }
 
 export interface Testimonial {
   id: string;
-  name: string;
-  role: string;
-  content: string;
+  nameI18n: LocaleText;
+  roleI18n: LocaleText;
+  contentI18n: LocaleText;
   avatar: string;
   rating?: number;
   date?: string;
@@ -283,6 +384,288 @@ function mapContactRow(row: Record<string, unknown>): ContactMessage {
   };
 }
 
+function mapEducationRow(row: Record<string, unknown>): Education {
+  return {
+    id: String(row.id ?? ''),
+    institutionI18n: fromDbJson(
+      row.institution_i18n,
+      row.institution as string | null
+    ),
+    degreeI18n: fromDbJson(row.degree_i18n, row.degree as string | null),
+    durationI18n: fromDbJson(row.duration_i18n, row.duration as string | null),
+    coursesI18n: localeTextArrayFromDb(
+      row.courses_i18n,
+      row.courses as string[] | null
+    ),
+  };
+}
+
+export function educationToDbPayload(e: Partial<Education>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (e.institutionI18n !== undefined) {
+    out.institution_i18n = toDbJson(e.institutionI18n);
+    out.institution = primaryForLegacyColumn(e.institutionI18n, 'fr');
+  }
+  if (e.degreeI18n !== undefined) {
+    out.degree_i18n = toDbJson(e.degreeI18n);
+    out.degree = primaryForLegacyColumn(e.degreeI18n, 'fr');
+  }
+  if (e.durationI18n !== undefined) {
+    out.duration_i18n = toDbJson(e.durationI18n);
+    out.duration = primaryForLegacyColumn(e.durationI18n, 'fr');
+  }
+  if (e.coursesI18n !== undefined) {
+    out.courses_i18n = localeTextArrayToDb(e.coursesI18n);
+    out.courses = e.coursesI18n.map((c) => primaryForLegacyColumn(c, 'fr'));
+  }
+  return out;
+}
+
+function mapTestimonialRow(row: Record<string, unknown>): Testimonial {
+  return {
+    id: String(row.id ?? ''),
+    nameI18n: fromDbJson(row.name_i18n, row.name as string | null),
+    roleI18n: fromDbJson(row.role_i18n, row.role as string | null),
+    contentI18n: fromDbJson(row.content_i18n, row.content as string | null),
+    avatar: normalizeTestimonialAvatarUrl(row.avatar as string | null),
+    rating:
+      typeof row.rating === 'number' ? row.rating : undefined,
+    date: row.date != null ? String(row.date) : undefined,
+  };
+}
+
+export function testimonialToDbPayload(t: Partial<Testimonial>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (t.nameI18n !== undefined) {
+    out.name_i18n = toDbJson(t.nameI18n);
+    out.name = primaryForLegacyColumn(t.nameI18n, 'fr');
+  }
+  if (t.roleI18n !== undefined) {
+    out.role_i18n = toDbJson(t.roleI18n);
+    out.role = primaryForLegacyColumn(t.roleI18n, 'fr');
+  }
+  if (t.contentI18n !== undefined) {
+    out.content_i18n = toDbJson(t.contentI18n);
+    out.content = primaryForLegacyColumn(t.contentI18n, 'fr');
+  }
+  if (t.avatar !== undefined) out.avatar = t.avatar;
+  if (t.rating !== undefined) out.rating = t.rating;
+  if (t.date !== undefined) out.date = t.date;
+  return out;
+}
+
+function mapCertificationRow(row: Record<string, unknown>): Certification {
+  return {
+    id: String(row.id ?? ''),
+    titleI18n: fromDbJson(row.title_i18n, row.title as string | null),
+    issuerI18n: fromDbJson(row.issuer_i18n, row.issuer as string | null),
+    date: String(row.date ?? ''),
+    credential:
+      row.credential != null ? String(row.credential) : undefined,
+  };
+}
+
+export function certificationToDbPayload(c: Partial<Certification>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (c.titleI18n !== undefined) {
+    out.title_i18n = toDbJson(c.titleI18n);
+    out.title = primaryForLegacyColumn(c.titleI18n, 'fr');
+  }
+  if (c.issuerI18n !== undefined) {
+    out.issuer_i18n = toDbJson(c.issuerI18n);
+    out.issuer = primaryForLegacyColumn(c.issuerI18n, 'fr');
+  }
+  if (c.date !== undefined) out.date = c.date;
+  if (c.credential !== undefined) out.credential = c.credential;
+  return out;
+}
+
+function mapServiceRow(row: Record<string, unknown>): Service {
+  const technologiesRaw = row.technologies;
+  const technologies = Array.isArray(technologiesRaw)
+    ? (technologiesRaw as string[]).map((t: string) => {
+        try {
+          return JSON.parse(t);
+        } catch {
+          return { name: t };
+        }
+      })
+    : [];
+  return {
+    id: String(row.id ?? ''),
+    titleI18n: fromDbJson(row.title_i18n, row.title as string | null),
+    descriptionI18n: fromDbJson(
+      row.description_i18n,
+      row.description as string | null
+    ),
+    iconName:
+      typeof row.icon_name === 'string' && row.icon_name
+        ? row.icon_name
+        : undefined,
+    category: String(row.category ?? ''),
+    featuresI18n: localeTextArrayFromDb(
+      row.features_i18n,
+      row.features as string[] | null
+    ),
+    technologies,
+    pricing:
+      row.pricing != null && typeof row.pricing === 'object'
+        ? (row.pricing as Service['pricing'])
+        : undefined,
+  };
+}
+
+export function serviceToDbPayload(s: Partial<Service>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (s.titleI18n !== undefined) {
+    out.title_i18n = toDbJson(s.titleI18n);
+    out.title = primaryForLegacyColumn(s.titleI18n, 'fr');
+  }
+  if (s.descriptionI18n !== undefined) {
+    out.description_i18n = toDbJson(s.descriptionI18n);
+    out.description = primaryForLegacyColumn(s.descriptionI18n, 'fr');
+  }
+  if (s.featuresI18n !== undefined) {
+    out.features_i18n = localeTextArrayToDb(s.featuresI18n);
+    out.features = s.featuresI18n.map((f) => primaryForLegacyColumn(f, 'fr'));
+  }
+  if (s.category !== undefined) out.category = s.category;
+  if (s.iconName !== undefined) out.icon_name = s.iconName?.trim() || null;
+  if (s.pricing !== undefined) out.pricing = s.pricing;
+  if (s.technologies !== undefined) {
+    out.technologies = s.technologies.map((t) =>
+      typeof t === 'string' ? t : JSON.stringify(t)
+    );
+  }
+  return out;
+}
+
+function mapAboutRowToInfo(data: Record<string, unknown>): AboutInfo {
+  const rolesLegacy = Array.isArray(data.roles) ? (data.roles as string[]) : [];
+  return {
+    nameI18n: fromDbJson(data.name_i18n, data.name as string | null),
+    titleI18n: fromDbJson(data.title_i18n, data.title as string | null),
+    bioI18n: fromDbJson(data.bio_i18n, data.bio as string | null),
+    avatar: String(data.avatar ?? ''),
+    rolesI18n: localeTextArrayFromDb(data.roles_i18n, rolesLegacy),
+    locationI18n: fromDbJson(data.location_i18n, data.location as string | null),
+    timezoneI18n: fromDbJson(data.timezone_i18n, data.timezone as string | null),
+    availableStatusI18n: fromDbJson(
+      data.available_status_i18n,
+      data.available_status as string | null
+    ),
+    email: String(data.email ?? ''),
+    phone: String(data.phone ?? ''),
+    experienceI18n: fromDbJson(
+      data.experience_i18n,
+      data.experience as string | null
+    ),
+    nationalityI18n: fromDbJson(
+      data.nationality_i18n,
+      data.nationality as string | null
+    ),
+    shopUrl: data.shop_url != null ? String(data.shop_url) : undefined,
+    freelanceStatusI18n: fromDbJson(
+      data.freelance_status_i18n,
+      data.freelance_status as string | null
+    ),
+    languagesI18n: fromDbJson(
+      data.languages_i18n,
+      data.languages as string | null
+    ),
+    website: data.website != null ? String(data.website) : undefined,
+    github: data.github != null ? String(data.github) : undefined,
+    linkedin: data.linkedin != null ? String(data.linkedin) : undefined,
+    twitter: data.twitter != null ? String(data.twitter) : undefined,
+    youtube: data.youtube != null ? String(data.youtube) : undefined,
+    cvUrl: data.cv_url != null ? String(data.cv_url) : undefined,
+    heroBadgeI18n: fromDbJson(
+      data.hero_badge_i18n,
+      data.hero_badge as string | null
+    ),
+    homeAvailableTitleI18n: fromDbJson(
+      data.home_available_title_i18n,
+      data.home_available_title as string | null
+    ),
+    homeAvailableSubtitleI18n: fromDbJson(
+      data.home_available_subtitle_i18n,
+      data.home_available_subtitle as string | null
+    ),
+    homeStatYears:
+      typeof data.home_stat_years === 'number' ? data.home_stat_years : undefined,
+    homeStatProjects:
+      typeof data.home_stat_projects === 'number'
+        ? data.home_stat_projects
+        : undefined,
+    homeStatClients:
+      typeof data.home_stat_clients === 'number'
+        ? data.home_stat_clients
+        : undefined,
+    homeStatSatisfaction:
+      typeof data.home_stat_satisfaction === 'number'
+        ? data.home_stat_satisfaction
+        : undefined,
+    whatsappUrl: data.whatsapp_url != null ? String(data.whatsapp_url) : '',
+    telegramUrl: data.telegram_url != null ? String(data.telegram_url) : '',
+  };
+}
+
+export function aboutInfoToDbPayload(updates: Partial<AboutInfo>): Record<string, unknown> {
+  const fieldMap: [keyof AboutInfo, string, string][] = [
+    ['nameI18n', 'name_i18n', 'name'],
+    ['titleI18n', 'title_i18n', 'title'],
+    ['bioI18n', 'bio_i18n', 'bio'],
+    ['locationI18n', 'location_i18n', 'location'],
+    ['experienceI18n', 'experience_i18n', 'experience'],
+    ['nationalityI18n', 'nationality_i18n', 'nationality'],
+    ['freelanceStatusI18n', 'freelance_status_i18n', 'freelance_status'],
+    ['languagesI18n', 'languages_i18n', 'languages'],
+    ['availableStatusI18n', 'available_status_i18n', 'available_status'],
+    ['timezoneI18n', 'timezone_i18n', 'timezone'],
+    ['heroBadgeI18n', 'hero_badge_i18n', 'hero_badge'],
+    ['homeAvailableTitleI18n', 'home_available_title_i18n', 'home_available_title'],
+    [
+      'homeAvailableSubtitleI18n',
+      'home_available_subtitle_i18n',
+      'home_available_subtitle',
+    ],
+  ];
+  const out: Record<string, unknown> = {};
+  for (const [key, jsonCol, legacyCol] of fieldMap) {
+    const v = updates[key];
+    if (v !== undefined && v !== null && typeof v === 'object' && 'fr' in v) {
+      out[jsonCol] = toDbJson(v as LocaleText);
+      out[legacyCol] = primaryForLegacyColumn(v as LocaleText, 'fr');
+    }
+  }
+  if (updates.rolesI18n !== undefined) {
+    out.roles_i18n = localeTextArrayToDb(updates.rolesI18n);
+    out.roles = updates.rolesI18n.map((r) => primaryForLegacyColumn(r, 'fr'));
+  }
+  const passthrough: [keyof AboutInfo, string][] = [
+    ['avatar', 'avatar'],
+    ['email', 'email'],
+    ['phone', 'phone'],
+    ['website', 'website'],
+    ['github', 'github'],
+    ['linkedin', 'linkedin'],
+    ['twitter', 'twitter'],
+    ['youtube', 'youtube'],
+    ['cvUrl', 'cv_url'],
+    ['shopUrl', 'shop_url'],
+    ['homeStatYears', 'home_stat_years'],
+    ['homeStatProjects', 'home_stat_projects'],
+    ['homeStatClients', 'home_stat_clients'],
+    ['homeStatSatisfaction', 'home_stat_satisfaction'],
+    ['whatsappUrl', 'whatsapp_url'],
+    ['telegramUrl', 'telegram_url'],
+  ];
+  for (const [k, col] of passthrough) {
+    if (updates[k] !== undefined) out[col] = updates[k];
+  }
+  return out;
+}
+
 export interface CVInfo {
   fileName: string;
   uploadDate: string;
@@ -311,7 +694,7 @@ export interface DashboardStats {
 }
 
 // Mock data
-export let projects: Project[] = [
+const rawProjects: Record<string, unknown>[] = [
   { id: '1', title: "Application mobile", description: "Maquette d'application mobile d'envoie de colis entre partenaires et clients.", image: "/assets/work/moc.png", category: "ui-ux", technologies: ["Figma"], demo: "", status: "in-progress", date: "2025-03", featured: true },
   { id: '2', title: "Application web", description: "Tableau de bord administratif complet pour la gestion des utilisateurs, des données et des statistiques.", image: "/assets/work/Admin1.png", category: "fullstack", technologies: ["Laravel", "Bootstrap", "JavaScript", "PHP"], github: "", demo: "", status: "completed", date: "2023-06" },
   { id: '3', title: "Application web", description: "Plateforme web moderne pour la commande et la livraison de repas. Interface utilisateur intuitive avec système de panier et paiement en ligne.", image: "/assets/work/n1.png", category: "frontend", technologies: ["Next.js", "Tailwind.css"], github: "", demo: "", status: "completed", date: "2023-06" },
@@ -349,7 +732,19 @@ export let projects: Project[] = [
   { id: "35", title: "Visuel de Nouvelle an", description: "Visuel de Nouvelle an", image: "/assets/work/voeux.png", category: "design", technologies: ["Canva"], status: "completed", date: "2025-12" }
 ];
 
-export let experiences: Experience[] = [
+export let projects: Project[] = rawProjects.map((o) => {
+  const row = o as Record<string, unknown>;
+  const title = String(row.title ?? '');
+  const description = String(row.description ?? '');
+  const { title: _t, description: _d, ...rest } = row;
+  return {
+    ...rest,
+    titleI18n: { fr: title, en: '' },
+    descriptionI18n: { fr: description, en: '' },
+  } as Project;
+});
+
+const rawExperiences: Record<string, unknown>[] = [
   {
     id: "1",
     company: "IWAJUTECH",
@@ -416,7 +811,35 @@ export let experiences: Experience[] = [
   },
 ];
 
-export let skills: Skill[] = [
+export let experiences: Experience[] = rawExperiences.map((o) => {
+  const row = o as Record<string, unknown>;
+  const company = String(row.company ?? '');
+  const position = String(row.position ?? '');
+  const duration = String(row.duration ?? '');
+  const achievements = Array.isArray(row.achievements)
+    ? (row.achievements as string[])
+    : [];
+  const skills = Array.isArray(row.skills) ? (row.skills as string[]) : [];
+  const {
+    company: _c,
+    position: _p,
+    duration: _d,
+    achievements: _a,
+    skills: _s,
+    ...rest
+  } = row;
+  return {
+    ...rest,
+    companyI18n: { fr: company, en: '' },
+    positionI18n: { fr: position, en: '' },
+    locationI18n: { fr: '', en: '' },
+    durationI18n: { fr: duration, en: '' },
+    achievementsI18n: achievements.map((s) => ({ fr: s, en: '' })),
+    skills,
+  } as Experience;
+});
+
+const rawSkills: Record<string, unknown>[] = [
   // Frontend
   { id: "1", name: "HTML5", level: 95, category: "Frontend" },
   { id: "2", name: "CSS3", level: 90, category: "Frontend" },
@@ -448,7 +871,17 @@ export let skills: Skill[] = [
   { id: "23", name: "WordPress", level: 65, category: "Autres" },
 ];
 
-export let services: Service[] = [
+export let skills: Skill[] = rawSkills.map((o) => {
+  const row = o as Record<string, unknown>;
+  const name = String(row.name ?? '');
+  const { name: _n, ...rest } = row;
+  return {
+    ...rest,
+    nameI18n: { fr: name, en: '' },
+  } as Skill;
+});
+
+const rawServices: Record<string, unknown>[] = [
   {
     id: "1",
     title: "Développement Web",
@@ -535,47 +968,87 @@ export let services: Service[] = [
   },
 ];
 
-export let certifications: Certification[] = [
+export let services: Service[] = rawServices.map((o) => {
+  const row = o as Record<string, unknown>;
+  const title = String(row.title ?? '');
+  const description = String(row.description ?? '');
+  const features = Array.isArray(row.features)
+    ? (row.features as string[])
+    : [];
+  const {
+    title: _t,
+    description: _d,
+    features: _f,
+    ...rest
+  } = row;
+  return {
+    ...rest,
+    titleI18n: { fr: title, en: '' },
+    descriptionI18n: { fr: description, en: '' },
+    featuresI18n: features.map((s) => ({ fr: s, en: '' })),
+  } as Service;
+});
+
+const rawCertifications: Record<string, unknown>[] = [
   { id: '1', title: 'Certification UX/UI Avancé', issuer: 'Figma', date: '2023', credential: 'VF-123456' },
   { id: '2', title: 'Développement Fullstack JavaScript', issuer: 'OpenClassrooms', date: '2022', credential: 'OC-789012' },
   { id: '3', title: 'Attestation de confection de sac en canevas', issuer: 'Formation Artisanale', date: '2025', credential: '' },
   { id: '4', title: 'Attestation de confection de sac (avec et sans carton) et accessoires', issuer: 'Formation Artisanale', date: '2025', credential: '' }
 ];
 
+export let certifications: Certification[] = rawCertifications.map((o) => {
+  const row = o as Record<string, unknown>;
+  const title = String(row.title ?? '');
+  const issuer = String(row.issuer ?? '');
+  const { title: _t, issuer: _i, ...rest } = row;
+  return {
+    ...rest,
+    titleI18n: { fr: title, en: '' },
+    issuerI18n: { fr: issuer, en: '' },
+  } as Certification;
+});
+
 export let aboutInfo: AboutInfo = {
-  name: "Gbènami Caroline MEHA",
-  title: "Développeur Fullstack & Design UX/UI",
-  bio: "Professionnelle polyvalente alliant expertise technique, vision commerciale et transmission de savoir. Experte autodidacte en design graphique et UX/UI design, je possède également un solide bagage en Marketing Communication et Commerce. Je conçois des visuels publicitaires percutants et des interfaces utilisateur intuitives, tout en apportant une dimension stratégique à chaque projet. Par ailleurs, je transmets mon expertise en tant que formatrice spécialisée dans la confection de sacs et d'accessoires artisanaux, alliant créativité et rigueur technique. Passionnée par le développement web et mobile, je transforme les besoins complexes en solutions digitales performantes.",
-  avatar: "/assets/avatar.jpeg",
-  location: "Bénin",
-  email: "caroline.meha1@gmail.com",
-  phone: "(+229) 01 95 23 21 83 / 01 96 29 05 28",
-  experience: "8+ Ans",
-  nationality: "Béninoise",
-  shopUrl: "https://gcmuniverse.vercel.app/",
-  freelanceStatus: "Disponible",
-  languages: "Fon, Français, Anglais",
-  github: "https://github.com/carolinemeha",
-  linkedin: "https://linkedin.com/in/caroline-meha",
-  twitter: "https://x.com/CarolineMeha",
-  youtube: "https://www.youtube.com/@carolinemeha",
-  website: "https://caroline-ten.vercel.app/",
-  roles: ["Développeur Fullstack", "UI/UX Designer", "Formatrice Artisanale"],
-  timezone: "UTC+1 (WAT)",
-  availableStatus: "Disponible pour de nouveaux projets",
-  cvUrl: "/assets/CV.pdf",
-  heroBadge: "Caroline Meha",
-  homeAvailableTitle: "Disponible",
-  homeAvailableSubtitle: "Pour de nouveaux projets",
+  nameI18n: { fr: 'Gbènami Caroline MEHA', en: '' },
+  titleI18n: { fr: 'Développeur Fullstack & Design UX/UI', en: '' },
+  bioI18n: {
+    fr: "Professionnelle polyvalente alliant expertise technique, vision commerciale et transmission de savoir. Experte autodidacte en design graphique et UX/UI design, je possède également un solide bagage en Marketing Communication et Commerce. Je conçois des visuels publicitaires percutants et des interfaces utilisateur intuitives, tout en apportant une dimension stratégique à chaque projet. Par ailleurs, je transmets mon expertise en tant que formatrice spécialisée dans la confection de sacs et d'accessoires artisanaux, alliant créativité et rigueur technique. Passionnée par le développement web et mobile, je transforme les besoins complexes en solutions digitales performantes.",
+    en: '',
+  },
+  avatar: '/assets/avatar.jpeg',
+  locationI18n: { fr: 'Bénin', en: '' },
+  email: 'caroline.meha1@gmail.com',
+  phone: '(+229) 01 95 23 21 83 / 01 96 29 05 28',
+  experienceI18n: { fr: '8+ Ans', en: '' },
+  nationalityI18n: { fr: 'Béninoise', en: '' },
+  shopUrl: 'https://gcmuniverse.vercel.app/',
+  freelanceStatusI18n: { fr: 'Disponible', en: '' },
+  languagesI18n: { fr: 'Fon, Français, Anglais', en: '' },
+  github: 'https://github.com/carolinemeha',
+  linkedin: 'https://linkedin.com/in/caroline-meha',
+  twitter: 'https://x.com/CarolineMeha',
+  youtube: 'https://www.youtube.com/@carolinemeha',
+  website: 'https://caroline-ten.vercel.app/',
+  rolesI18n: [
+    { fr: 'Développeur Fullstack', en: '' },
+    { fr: 'UI/UX Designer', en: '' },
+    { fr: 'Formatrice Artisanale', en: '' },
+  ],
+  timezoneI18n: { fr: 'UTC+1 (WAT)', en: '' },
+  availableStatusI18n: { fr: 'Disponible pour de nouveaux projets', en: '' },
+  cvUrl: '/assets/CV.pdf',
+  heroBadgeI18n: { fr: 'Caroline Meha', en: '' },
+  homeAvailableTitleI18n: { fr: 'Disponible', en: '' },
+  homeAvailableSubtitleI18n: { fr: 'Pour de nouveaux projets', en: '' },
   homeStatYears: 8,
   homeStatProjects: 15,
   homeStatClients: 12,
   homeStatSatisfaction: 100,
-  whatsappUrl: "https://wa.me/2290196290528",
-  telegramUrl: "https://t.me/carolinemeha",
+  whatsappUrl: 'https://wa.me/2290196290528',
+  telegramUrl: 'https://t.me/carolinemeha',
 };
 
-export let education: Education[] = [
+const rawEducation: Record<string, unknown>[] = [
   {
     id: "1",
     institution: "Formation Artisanale",
@@ -620,7 +1093,29 @@ export let education: Education[] = [
   },
 ];
 
-export let testimonials: Testimonial[] = [
+export let education: Education[] = rawEducation.map((o) => {
+  const row = o as Record<string, unknown>;
+  const institution = String(row.institution ?? '');
+  const degree = String(row.degree ?? '');
+  const duration = String(row.duration ?? '');
+  const courses = Array.isArray(row.courses) ? (row.courses as string[]) : [];
+  const {
+    institution: _i,
+    degree: _d,
+    duration: _du,
+    courses: _c,
+    ...rest
+  } = row;
+  return {
+    ...rest,
+    institutionI18n: { fr: institution, en: '' },
+    degreeI18n: { fr: degree, en: '' },
+    durationI18n: { fr: duration, en: '' },
+    coursesI18n: courses.map((s) => ({ fr: s, en: '' })),
+  } as Education;
+});
+
+const rawTestimonials: Record<string, unknown>[] = [
   {
     id: "1",
     name: "Client A",
@@ -650,6 +1145,22 @@ export let testimonials: Testimonial[] = [
     avatar: ''
   }
 ];
+
+export let testimonials: Testimonial[] = rawTestimonials.map((o) => {
+  const row = o as Record<string, unknown>;
+  const name = String(row.name ?? '');
+  const role = String(row.role ?? '');
+  const content = String(row.content ?? '');
+  const avatar = normalizeTestimonialAvatarUrl(row.avatar as string | null);
+  const { name: _n, role: _r, content: _c, avatar: _a, ...rest } = row;
+  return {
+    ...rest,
+    nameI18n: { fr: name, en: '' },
+    roleI18n: { fr: role, en: '' },
+    contentI18n: { fr: content, en: '' },
+    avatar,
+  } as Testimonial;
+});
 
 let contactMessages: ContactMessage[] = [
   {
@@ -683,11 +1194,7 @@ export const dataService = {
       return [];
     }
     
-    return data.map(p => ({
-      ...p,
-      demo: p.demo_url,
-      github: p.github_url
-    }));
+    return data.map((p) => mapProjectRow(p as Record<string, unknown>));
   },
 
   async getProject(id: string): Promise<Project | null> {
@@ -697,8 +1204,8 @@ export const dataService = {
       .eq('id', id)
       .maybeSingle();
     
-    if (error) return null;
-    return { ...data, demo: data.demo_url, github: data.github_url };
+    if (error || !data) return null;
+    return mapProjectRow(data as Record<string, unknown>);
   },
 
   async createProject(project: Omit<Project, 'id'>): Promise<Project | null> {
@@ -712,7 +1219,7 @@ export const dataService = {
       console.error('Error creating project:', error);
       return null;
     }
-    return { ...data, demo: data.demo_url, github: data.github_url };
+    return data ? mapProjectRow(data as Record<string, unknown>) : null;
   },
 
   async updateProject(id: string, updates: Partial<Project>): Promise<Project | null> {
@@ -732,7 +1239,7 @@ export const dataService = {
       console.error('Error updating project:', error);
       return null;
     }
-    return { ...data, demo: data.demo_url, github: data.github_url };
+    return data ? mapProjectRow(data as Record<string, unknown>) : null;
   },
 
   async deleteProject(id: string): Promise<boolean> {
@@ -743,25 +1250,36 @@ export const dataService = {
   // Experiences
   async getExperiences(): Promise<Experience[]> {
     const { data, error } = await supabase.from('experiences').select('*').order('created_at', { ascending: false });
-    return error ? [] : data;
+    return error || !data ? [] : data.map((row) => mapExperienceRow(row as Record<string, unknown>));
   },
 
   async getExperience(id: string): Promise<Experience | null> {
     const { data, error } = await supabase.from('experiences').select('*').eq('id', id).maybeSingle();
-    if (error) return null;
-    return data;
+    if (error || !data) return null;
+    return mapExperienceRow(data as Record<string, unknown>);
   },
 
   async createExperience(experience: Omit<Experience, 'id'>): Promise<Experience | null> {
-    const { data, error } = await supabase.from('experiences').insert(experience).select().maybeSingle();
-    if (error) return null;
-    return data;
+    const payload = experienceToDbPayload(experience);
+    const { data, error } = await supabase.from('experiences').insert(payload).select().maybeSingle();
+    if (error) {
+      logSupabase('createExperience', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapExperienceRow(data as Record<string, unknown>);
   },
 
   async updateExperience(id: string, updates: Partial<Experience>): Promise<Experience | null> {
-    const { data, error } = await supabase.from('experiences').update(updates).eq('id', id).select().maybeSingle();
-    if (error) return null;
-    return data;
+    const payload = experienceToDbPayload(updates);
+    if (Object.keys(payload).length === 0) return this.getExperience(id);
+    const { data, error } = await supabase.from('experiences').update(payload).eq('id', id).select().maybeSingle();
+    if (error) {
+      logSupabase('updateExperience', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapExperienceRow(data as Record<string, unknown>);
   },
 
   async deleteExperience(id: string): Promise<boolean> {
@@ -795,14 +1313,17 @@ export const dataService = {
     const { data, error } = await supabase
       .from('skills')
       .insert({
-        name: skill.name,
+        ...skillToDbPayload(skill),
         level: skill.level ?? 0,
         category: skill.category,
         icon_name: skill.iconName?.trim() || null,
       })
       .select()
       .maybeSingle();
-    if (error) return null;
+    if (error) {
+      logSupabase('createSkill', error);
+      return null;
+    }
     return data ? mapSkillFromRow(data as Record<string, unknown>) : null;
   },
 
@@ -817,7 +1338,10 @@ export const dataService = {
       .eq('id', id)
       .select()
       .maybeSingle();
-    if (error) return null;
+    if (error) {
+      logSupabase('updateSkill', error);
+      return null;
+    }
     return data ? mapSkillFromRow(data as Record<string, unknown>) : null;
   },
 
@@ -829,73 +1353,51 @@ export const dataService = {
   // Services
   async getServices(): Promise<Service[]> {
     const { data, error } = await supabase.from('services').select('*').order('created_at', { ascending: true });
-    if (error) return [];
-    return data.map(s => ({
-      ...s,
-      iconName: s.icon_name,
-      technologies: (s.technologies || []).map((t: string) => {
-        try {
-          return JSON.parse(t);
-        } catch (e) {
-          return { name: t };
-        }
-      })
-    }));
+    if (error || !data) return [];
+    return data.map((row) => mapServiceRow(row as Record<string, unknown>));
   },
 
   async createService(service: Omit<Service, 'id'>): Promise<Service | null> {
-    const { data, error } = await supabase.from('services').insert({
-      title: service.title,
-      description: service.description,
-      features: service.features,
-      pricing: service.pricing,
-      category: service.category,
-      icon_name: service.iconName,
-      technologies: (service.technologies || []).map(t => typeof t === 'string' ? t : JSON.stringify(t))
-    }).select().maybeSingle();
+    const { data, error } = await supabase
+      .from('services')
+      .insert({
+        ...serviceToDbPayload(service),
+        pricing: service.pricing,
+      })
+      .select()
+      .maybeSingle();
     if (error) {
       console.error('Erreur createService:', error);
       return null;
     }
-    return { 
-      ...data, 
-      iconName: data.icon_name,
-      technologies: (data.technologies || []).map((t: string) => {
-        try {
-          return JSON.parse(t);
-        } catch (e) {
-          return { name: t };
-        }
-      })
-    };
+    return data ? mapServiceRow(data as Record<string, unknown>) : null;
   },
 
   async updateService(id: string, updates: Partial<Service>): Promise<Service | null> {
-    const mappedUpdates: any = { ...updates };
-    if (mappedUpdates.iconName !== undefined) {
-      mappedUpdates.icon_name = mappedUpdates.iconName;
-      delete mappedUpdates.iconName;
-    }
+    const mappedUpdates = serviceToDbPayload(updates);
     if (updates.technologies) {
-      mappedUpdates.technologies = updates.technologies.map(t => typeof t === 'string' ? t : JSON.stringify(t));
+      mappedUpdates.technologies = updates.technologies.map((t) =>
+        typeof t === 'string' ? t : JSON.stringify(t)
+      );
     }
-
-    const { data, error } = await supabase.from('services').update(mappedUpdates).eq('id', id).select().maybeSingle();
+    if (updates.iconName !== undefined) {
+      mappedUpdates.icon_name = updates.iconName?.trim() || null;
+    }
+    if (Object.keys(mappedUpdates).length === 0) {
+      const cur = await supabase.from('services').select('*').eq('id', id).maybeSingle();
+      return cur.data ? mapServiceRow(cur.data as Record<string, unknown>) : null;
+    }
+    const { data, error } = await supabase
+      .from('services')
+      .update(mappedUpdates)
+      .eq('id', id)
+      .select()
+      .maybeSingle();
     if (error) {
       console.error('Erreur updateService:', error);
       return null;
     }
-    return { 
-      ...data, 
-      iconName: data.icon_name,
-      technologies: (data.technologies || []).map((t: string) => {
-        try {
-          return JSON.parse(t);
-        } catch (e) {
-          return { name: t };
-        }
-      })
-    };
+    return data ? mapServiceRow(data as Record<string, unknown>) : null;
   },
 
   async deleteService(id: string): Promise<boolean> {
@@ -917,43 +1419,20 @@ export const dataService = {
         return aboutInfo; // mock values if DB is empty
       }
 
+      const mapped = mapAboutRowToInfo(data as Record<string, unknown>);
       const asInt = (v: unknown): number | undefined => {
         if (v == null) return undefined;
         if (typeof v === 'number' && !Number.isNaN(v)) return v;
         const n = parseInt(String(v), 10);
         return Number.isNaN(n) ? undefined : n;
       };
-
       return {
-        ...data,
-        shopUrl: data.shop_url,
-        freelanceStatus: data.freelance_status,
-        availableStatus: data.available_status,
-        cvUrl: data.cv_url,
-        languages: data.languages,
-        nationality: data.nationality,
-        roles: data.roles || [],
-        timezone: data.timezone,
-        heroBadge:
-          data.hero_badge != null && String(data.hero_badge).trim() !== ''
-            ? String(data.hero_badge).trim()
-            : '',
-        homeAvailableTitle:
-          data.home_available_title != null &&
-          String(data.home_available_title).trim() !== ''
-            ? String(data.home_available_title).trim()
-            : '',
-        homeAvailableSubtitle:
-          data.home_available_subtitle != null &&
-          String(data.home_available_subtitle).trim() !== ''
-            ? String(data.home_available_subtitle).trim()
-            : '',
-        homeStatYears: asInt(data.home_stat_years),
-        homeStatProjects: asInt(data.home_stat_projects),
-        homeStatClients: asInt(data.home_stat_clients),
-        homeStatSatisfaction: asInt(data.home_stat_satisfaction),
-        whatsappUrl: data.whatsapp_url ?? '',
-        telegramUrl: data.telegram_url ?? '',
+        ...mapped,
+        homeStatYears: asInt(data.home_stat_years) ?? mapped.homeStatYears,
+        homeStatProjects: asInt(data.home_stat_projects) ?? mapped.homeStatProjects,
+        homeStatClients: asInt(data.home_stat_clients) ?? mapped.homeStatClients,
+        homeStatSatisfaction:
+          asInt(data.home_stat_satisfaction) ?? mapped.homeStatSatisfaction,
       };
     } catch (e) {
       console.error('Unexpected error in getAboutInfo:', e);
@@ -962,43 +1441,7 @@ export const dataService = {
   },
 
   async updateAboutInfo(updates: Partial<AboutInfo>): Promise<AboutInfo | null> {
-    const {
-      shopUrl,
-      freelanceStatus,
-      availableStatus,
-      cvUrl,
-      heroBadge,
-      homeAvailableTitle,
-      homeAvailableSubtitle,
-      homeStatYears,
-      homeStatProjects,
-      homeStatClients,
-      homeStatSatisfaction,
-      whatsappUrl,
-      telegramUrl,
-      ...rest
-    } = updates;
-    const dbPayload: Record<string, unknown> = { ...rest };
-    if (shopUrl !== undefined) dbPayload.shop_url = shopUrl;
-    if (freelanceStatus !== undefined) dbPayload.freelance_status = freelanceStatus;
-    if (availableStatus !== undefined) dbPayload.available_status = availableStatus;
-    if (cvUrl !== undefined) dbPayload.cv_url = cvUrl;
-    if (heroBadge !== undefined) dbPayload.hero_badge = heroBadge?.trim() || null;
-    if (homeAvailableTitle !== undefined)
-      dbPayload.home_available_title = homeAvailableTitle?.trim() || null;
-    if (homeAvailableSubtitle !== undefined)
-      dbPayload.home_available_subtitle = homeAvailableSubtitle?.trim() || null;
-    if (homeStatYears !== undefined) dbPayload.home_stat_years = homeStatYears;
-    if (homeStatProjects !== undefined)
-      dbPayload.home_stat_projects = homeStatProjects;
-    if (homeStatClients !== undefined)
-      dbPayload.home_stat_clients = homeStatClients;
-    if (homeStatSatisfaction !== undefined)
-      dbPayload.home_stat_satisfaction = homeStatSatisfaction;
-    if (whatsappUrl !== undefined)
-      dbPayload.whatsapp_url = whatsappUrl?.trim() || null;
-    if (telegramUrl !== undefined)
-      dbPayload.telegram_url = telegramUrl?.trim() || null;
+    const dbPayload = aboutInfoToDbPayload(updates);
     dbPayload.updated_at = new Date().toISOString();
 
     // Check if a row already exists (about is a singleton table)
@@ -1028,52 +1471,64 @@ export const dataService = {
       return null;
     }
 
+    if (!data) return null;
+    const mapped = mapAboutRowToInfo(data as Record<string, unknown>);
+    const asInt = (v: unknown): number | undefined => {
+      if (v == null) return undefined;
+      if (typeof v === 'number' && !Number.isNaN(v)) return v;
+      const n = parseInt(String(v), 10);
+      return Number.isNaN(n) ? undefined : n;
+    };
     return {
-      ...data,
-      shopUrl: data.shop_url,
-      freelanceStatus: data.freelance_status,
-      availableStatus: data.available_status,
-      cvUrl: data.cv_url,
-      heroBadge: data.hero_badge ?? '',
-      homeAvailableTitle: data.home_available_title ?? '',
-      homeAvailableSubtitle: data.home_available_subtitle ?? '',
-      homeStatYears:
-        typeof data.home_stat_years === 'number'
-          ? data.home_stat_years
-          : undefined,
-      homeStatProjects:
-        typeof data.home_stat_projects === 'number'
-          ? data.home_stat_projects
-          : undefined,
-      homeStatClients:
-        typeof data.home_stat_clients === 'number'
-          ? data.home_stat_clients
-          : undefined,
+      ...mapped,
+      homeStatYears: asInt(data.home_stat_years) ?? mapped.homeStatYears,
+      homeStatProjects: asInt(data.home_stat_projects) ?? mapped.homeStatProjects,
+      homeStatClients: asInt(data.home_stat_clients) ?? mapped.homeStatClients,
       homeStatSatisfaction:
-        typeof data.home_stat_satisfaction === 'number'
-          ? data.home_stat_satisfaction
-          : undefined,
-      whatsappUrl: data.whatsapp_url ?? '',
-      telegramUrl: data.telegram_url ?? '',
+        asInt(data.home_stat_satisfaction) ?? mapped.homeStatSatisfaction,
     };
   },
 
   // Education
   async getEducation(): Promise<Education[]> {
     const { data, error } = await supabase.from('education').select('*').order('duration', { ascending: false });
-    return error ? [] : data;
+    return error || !data
+      ? []
+      : data.map((row) => mapEducationRow(row as Record<string, unknown>));
   },
 
   async createEducation(education: Omit<Education, 'id'>): Promise<Education | null> {
-    const { data, error } = await supabase.from('education').insert(education).select().maybeSingle();
-    if (error) return null;
-    return data;
+    const { data, error } = await supabase
+      .from('education')
+      .insert(educationToDbPayload(education))
+      .select()
+      .maybeSingle();
+    if (error) {
+      logSupabase('createEducation', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapEducationRow(data as Record<string, unknown>);
   },
 
   async updateEducation(id: string, updates: Partial<Education>): Promise<Education | null> {
-    const { data, error } = await supabase.from('education').update(updates).eq('id', id).select().maybeSingle();
-    if (error) return null;
-    return data;
+    const payload = educationToDbPayload(updates);
+    if (Object.keys(payload).length === 0) {
+      const cur = await supabase.from('education').select('*').eq('id', id).maybeSingle();
+      return cur.data ? mapEducationRow(cur.data as Record<string, unknown>) : null;
+    }
+    const { data, error } = await supabase
+      .from('education')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .maybeSingle();
+    if (error) {
+      logSupabase('updateEducation', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapEducationRow(data as Record<string, unknown>);
   },
 
   async deleteEducation(id: string): Promise<boolean> {
@@ -1085,34 +1540,39 @@ export const dataService = {
   async getTestimonials(): Promise<Testimonial[]> {
     const { data, error } = await supabase.from('testimonials').select('*').order('date', { ascending: false });
     if (error || !data) return [];
-    return data.map((row) => ({
-      ...row,
-      avatar: normalizeTestimonialAvatarUrl(row.avatar),
-    }));
+    return data.map((row) => mapTestimonialRow(row as Record<string, unknown>));
   },
 
   async createTestimonial(testimonial: Omit<Testimonial, 'id'>): Promise<Testimonial | null> {
-    const payload = {
+    const payload = testimonialToDbPayload({
       ...testimonial,
       avatar: normalizeTestimonialAvatarUrl(testimonial.avatar),
-    };
+    });
     const { data, error } = await supabase.from('testimonials').insert(payload).select().maybeSingle();
-    if (error) return null;
-    return data
-      ? { ...data, avatar: normalizeTestimonialAvatarUrl(data.avatar) }
-      : null;
+    if (error) {
+      logSupabase('createTestimonial', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapTestimonialRow(data as Record<string, unknown>);
   },
 
   async updateTestimonial(id: string, updates: Partial<Testimonial>): Promise<Testimonial | null> {
-    const payload = { ...updates };
-    if ('avatar' in payload && payload.avatar !== undefined) {
-      payload.avatar = normalizeTestimonialAvatarUrl(payload.avatar);
+    const payload = testimonialToDbPayload(updates);
+    if ('avatar' in updates && updates.avatar !== undefined) {
+      payload.avatar = normalizeTestimonialAvatarUrl(updates.avatar);
+    }
+    if (Object.keys(payload).length === 0) {
+      const cur = await supabase.from('testimonials').select('*').eq('id', id).maybeSingle();
+      return cur.data ? mapTestimonialRow(cur.data as Record<string, unknown>) : null;
     }
     const { data, error } = await supabase.from('testimonials').update(payload).eq('id', id).select().maybeSingle();
-    if (error) return null;
-    return data
-      ? { ...data, avatar: normalizeTestimonialAvatarUrl(data.avatar) }
-      : null;
+    if (error) {
+      logSupabase('updateTestimonial', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapTestimonialRow(data as Record<string, unknown>);
   },
 
   async deleteTestimonial(id: string): Promise<boolean> {
@@ -1123,19 +1583,43 @@ export const dataService = {
   // Certifications
   async getCertifications(): Promise<Certification[]> {
     const { data, error } = await supabase.from('certifications').select('*').order('date', { ascending: false });
-    return error ? [] : data;
+    return error || !data
+      ? []
+      : data.map((row) => mapCertificationRow(row as Record<string, unknown>));
   },
 
   async createCertification(cert: Omit<Certification, 'id'>): Promise<Certification | null> {
-    const { data, error } = await supabase.from('certifications').insert(cert).select().maybeSingle();
-    if (error) return null;
-    return data;
+    const { data, error } = await supabase
+      .from('certifications')
+      .insert(certificationToDbPayload(cert))
+      .select()
+      .maybeSingle();
+    if (error) {
+      logSupabase('createCertification', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapCertificationRow(data as Record<string, unknown>);
   },
 
   async updateCertification(id: string, updates: Partial<Certification>): Promise<Certification | null> {
-    const { data, error } = await supabase.from('certifications').update(updates).eq('id', id).select().maybeSingle();
-    if (error) return null;
-    return data;
+    const payload = certificationToDbPayload(updates);
+    if (Object.keys(payload).length === 0) {
+      const cur = await supabase.from('certifications').select('*').eq('id', id).maybeSingle();
+      return cur.data ? mapCertificationRow(cur.data as Record<string, unknown>) : null;
+    }
+    const { data, error } = await supabase
+      .from('certifications')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .maybeSingle();
+    if (error) {
+      logSupabase('updateCertification', error);
+      return null;
+    }
+    if (!data) return null;
+    return mapCertificationRow(data as Record<string, unknown>);
   },
 
   async deleteCertification(id: string): Promise<boolean> {
@@ -1346,10 +1830,11 @@ export const dataService = {
     ]);
 
     if (latestProject?.created_at) {
+      const lp = latestProject as Record<string, unknown>;
       activity.push({
         id: latestProject.id,
         type: 'project',
-        subtitle: latestProject.title,
+        subtitle: dashActivityText(lp.title_i18n, lp.title as string | null),
         date: latestProject.created_at,
       });
     }
@@ -1357,10 +1842,11 @@ export const dataService = {
     if (latestSkill) {
       const d = latestSkill.updated_at || latestSkill.created_at;
       if (d) {
+        const ls = latestSkill as Record<string, unknown>;
         activity.push({
           id: latestSkill.id,
           type: 'skill',
-          subtitle: latestSkill.name,
+          subtitle: dashActivityText(ls.name_i18n, ls.name as string | null),
           date: d,
         });
       }
@@ -1376,37 +1862,41 @@ export const dataService = {
     }
 
     if (latestExp?.created_at) {
+      const le = latestExp as Record<string, unknown>;
       activity.push({
         id: latestExp.id,
         type: 'experience',
-        subtitle: `${latestExp.position} — ${latestExp.company}`,
+        subtitle: `${dashActivityText(le.position_i18n, le.position as string | null)} — ${dashActivityText(le.company_i18n, le.company as string | null)}`,
         date: latestExp.created_at,
       });
     }
 
     if (latestEdu?.created_at) {
+      const ldu = latestEdu as Record<string, unknown>;
       activity.push({
         id: latestEdu.id,
         type: 'education',
-        subtitle: `${latestEdu.degree} — ${latestEdu.institution}`,
+        subtitle: `${dashActivityText(ldu.degree_i18n, ldu.degree as string | null)} — ${dashActivityText(ldu.institution_i18n, ldu.institution as string | null)}`,
         date: latestEdu.created_at,
       });
     }
 
     if (latestTesti?.created_at) {
+      const lt = latestTesti as Record<string, unknown>;
       activity.push({
         id: latestTesti.id,
         type: 'testimonial',
-        subtitle: latestTesti.name,
+        subtitle: dashActivityText(lt.name_i18n, lt.name as string | null),
         date: latestTesti.created_at,
       });
     }
 
     if (latestService?.created_at) {
+      const lsv = latestService as Record<string, unknown>;
       activity.push({
         id: latestService.id,
         type: 'service',
-        subtitle: latestService.title,
+        subtitle: dashActivityText(lsv.title_i18n, lsv.title as string | null),
         date: latestService.created_at,
       });
     }

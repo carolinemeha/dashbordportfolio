@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Certification } from '@/lib/data';
 import { Award, Calendar, Building, LinkIcon } from 'lucide-react';
+import { LocaleTextFieldGroup } from '@/components/admin/LocaleTextFieldGroup';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { emptyLocaleText } from '@/lib/locale-text';
+import { BilingualFormHint } from '@/components/admin/BilingualFormHint';
 
 interface CertificationFormProps {
   certification: Certification | null;
@@ -17,14 +20,36 @@ interface CertificationFormProps {
 
 export default function CertificationForm({ certification, onSave, onCancel }: CertificationFormProps) {
   const { t } = useAdminI18n();
-  const [formData, setFormData] = useState<Omit<Certification, 'id'>>(
-    certification || {
-      title: '',
-      issuer: '',
-      date: '',
-      credential: '',
-    }
+  const empty = (): Omit<Certification, 'id'> => ({
+    titleI18n: emptyLocaleText(),
+    issuerI18n: emptyLocaleText(),
+    date: '',
+    credential: '',
+  });
+
+  const [formData, setFormData] = useState<Omit<Certification, 'id'>>(() =>
+    certification
+      ? {
+          titleI18n: certification.titleI18n,
+          issuerI18n: certification.issuerI18n,
+          date: certification.date,
+          credential: certification.credential ?? '',
+        }
+      : empty()
   );
+
+  useEffect(() => {
+    setFormData(
+      certification
+        ? {
+            titleI18n: certification.titleI18n,
+            issuerI18n: certification.issuerI18n,
+            date: certification.date,
+            credential: certification.credential ?? '',
+          }
+        : empty()
+    );
+  }, [certification]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,37 +72,38 @@ export default function CertificationForm({ certification, onSave, onCancel }: C
           <DialogDescription className="text-muted-foreground">
             {t('forms.certification.description')}
           </DialogDescription>
+          <BilingualFormHint />
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-foreground">
-              {t('forms.certification.certTitle')} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-              placeholder={t('forms.certification.certTitlePh')}
-              required
-            />
-          </div>
+          <LocaleTextFieldGroup
+            label={
+              <>
+                {t('forms.certification.certTitle')} <span className="text-destructive">*</span>
+              </>
+            }
+            value={formData.titleI18n}
+            onChange={(titleI18n) => setFormData({ ...formData, titleI18n })}
+            requiredFr
+            inputIdPrefix="cert-title"
+            placeholderFr={t('forms.certification.certTitlePh')}
+            placeholderEn={t('forms.certification.certTitlePhEn')}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="issuer" className="text-foreground flex items-center gap-2">
-              <Building className="h-4 w-4 text-muted-foreground" /> {t('forms.certification.issuer')}{' '}
-              <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="issuer"
-              value={formData.issuer}
-              onChange={(e) => setFormData({ ...formData, issuer: e.target.value })}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-              placeholder={t('forms.certification.issuerPh')}
-              required
-            />
-          </div>
+          <LocaleTextFieldGroup
+            label={
+              <>
+                <Building className="h-4 w-4 text-muted-foreground inline mr-1" />
+                {t('forms.certification.issuer')} <span className="text-destructive">*</span>
+              </>
+            }
+            value={formData.issuerI18n}
+            onChange={(issuerI18n) => setFormData({ ...formData, issuerI18n })}
+            requiredFr
+            inputIdPrefix="cert-issuer"
+            placeholderFr={t('forms.certification.issuerPh')}
+            placeholderEn={t('forms.certification.issuerPhEn')}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -11,9 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { pickLocalized } from '@/lib/locale-text';
+import { toast } from 'sonner';
 
 export default function CertificationsPage() {
-  const { t } = useAdminI18n();
+  const { t, locale } = useAdminI18n();
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCert, setEditingCert] = useState<Certification | null>(null);
@@ -28,21 +30,24 @@ export default function CertificationsPage() {
 
   const handleCreate = async (cert: Omit<Certification, 'id'>) => {
     const newCert = await dataService.createCertification(cert);
-    if (newCert) {
-      setCertifications([...certifications, newCert]);
-      setIsFormOpen(false);
+    if (!newCert) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    setCertifications([...certifications, newCert]);
+    setIsFormOpen(false);
   };
 
   const handleUpdate = async (cert: Omit<Certification, 'id'>) => {
-    if (editingCert) {
-      const updated = await dataService.updateCertification(editingCert.id, cert);
-      if (updated) {
-        setCertifications(certifications.map(c => c.id === editingCert.id ? updated : c));
-      }
-      setEditingCert(null);
-      setIsFormOpen(false);
+    if (!editingCert) return;
+    const updated = await dataService.updateCertification(editingCert.id, cert);
+    if (!updated) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    setCertifications(certifications.map((c) => (c.id === editingCert.id ? updated : c)));
+    setEditingCert(null);
+    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -83,7 +88,10 @@ export default function CertificationsPage() {
           animate="show"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {certifications.map((cert) => (
+          {certifications.map((cert) => {
+            const titleShown = pickLocalized(cert.titleI18n, locale);
+            const issuerShown = pickLocalized(cert.issuerI18n, locale);
+            return (
             <motion.div
               key={cert.id}
               variants={adminStaggerItemExit}
@@ -94,11 +102,11 @@ export default function CertificationsPage() {
                 <CardHeader className="pb-3 flex-row items-start justify-between space-y-0">
                   <div className="flex-1 pr-4">
                     <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors line-clamp-2">
-                      {cert.title}
+                      {titleShown}
                     </CardTitle>
                     <CardDescription className="flex items-center gap-1.5 mt-2 font-medium text-foreground/70">
                       <Building className="h-3.5 w-3.5" />
-                      {cert.issuer}
+                      {issuerShown}
                     </CardDescription>
                   </div>
                   <div className="p-2 bg-primary/10 rounded-lg">
@@ -130,7 +138,8 @@ export default function CertificationsPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
       </AnimatePresence>
 

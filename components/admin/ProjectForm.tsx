@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +12,11 @@ import { Project } from '@/lib/data';
 import { X, FolderOpen, Link as LinkIcon, Github, Calendar, Tag, Activity, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageUpload from './ImageUpload';
+import { LocaleTextFieldGroup } from '@/components/admin/LocaleTextFieldGroup';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 import { projectCategoryLabel } from '@/lib/admin-ui-labels';
+import { emptyLocaleText } from '@/lib/locale-text';
+import { BilingualFormHint } from '@/components/admin/BilingualFormHint';
 
 interface ProjectFormProps {
   project?: Project | null;
@@ -23,8 +25,8 @@ interface ProjectFormProps {
 }
 
 const emptyForm = (project?: Project | null) => ({
-  title: project?.title ?? '',
-  description: project?.description ?? '',
+  titleI18n: project?.titleI18n ?? emptyLocaleText(),
+  descriptionI18n: project?.descriptionI18n ?? emptyLocaleText(),
   image: project?.image ?? '',
   demo: project?.demo ?? '',
   github: project?.github ?? '',
@@ -84,22 +86,25 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
           <DialogDescription className="text-muted-foreground">
             {project ? t('forms.project.descEdit') : t('forms.project.descNew')}
           </DialogDescription>
+          <BilingualFormHint />
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <LocaleTextFieldGroup
+            label={
+              <>
+                {t('forms.project.projectTitle')} <span className="text-destructive">*</span>
+              </>
+            }
+            value={formData.titleI18n ?? emptyLocaleText()}
+            onChange={(titleI18n) => setFormData({ ...formData, titleI18n })}
+            requiredFr
+            inputIdPrefix="project-title"
+            placeholderFr={t('forms.project.titlePh')}
+            placeholderEn={t('forms.project.titlePhEn')}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-foreground">{t('forms.project.projectTitle')} <span className="text-destructive">*</span></Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.project.titlePh')}
-                required
-              />
-            </div>
-            
             <div className="space-y-2">
               <Label htmlFor="date" className="text-foreground flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" /> {t('forms.project.date')} <span className="text-destructive">*</span>
@@ -151,18 +156,20 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-foreground">{t('forms.project.description')} <span className="text-destructive">*</span></Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y min-h-[100px]"
-              placeholder={t('forms.project.descPh')}
-              rows={3}
-              required
-            />
-          </div>
+          <LocaleTextFieldGroup
+            label={
+              <>
+                {t('forms.project.description')} <span className="text-destructive">*</span>
+              </>
+            }
+            value={formData.descriptionI18n ?? emptyLocaleText()}
+            onChange={(descriptionI18n) => setFormData({ ...formData, descriptionI18n })}
+            multiline
+            requiredFr
+            inputIdPrefix="project-description"
+            placeholderFr={t('forms.project.descPh')}
+            placeholderEn={t('forms.project.descPhEn')}
+          />
 
           <div className="space-y-2">
             <ImageUpload

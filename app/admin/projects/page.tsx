@@ -12,6 +12,8 @@ import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItemExit } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 import { projectCategoryLabel } from '@/lib/admin-ui-labels';
+import { pickLocalized } from '@/lib/locale-text';
+import { toast } from 'sonner';
 
 function ProjectStatusBadge({
   status,
@@ -45,7 +47,7 @@ function ProjectStatusBadge({
 }
 
 export default function ProjectsPage() {
-  const { t } = useAdminI18n();
+  const { t, locale } = useAdminI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -60,21 +62,25 @@ export default function ProjectsPage() {
 
   const handleCreate = async (projectData: Omit<Project, 'id'>) => {
     const newProject = await dataService.createProject(projectData);
-    if (newProject) {
-      const refreshedData = await dataService.getProjects();
-      setProjects(refreshedData);
-      setIsFormOpen(false);
+    if (!newProject) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getProjects();
+    setProjects(refreshedData);
+    setIsFormOpen(false);
   };
 
   const handleUpdate = async (id: string, updates: Partial<Project>) => {
     const updatedProject = await dataService.updateProject(id, updates);
-    if (updatedProject) {
-      const refreshedData = await dataService.getProjects();
-      setProjects(refreshedData);
-      setEditingProject(null);
-      setIsFormOpen(false);
+    if (!updatedProject) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getProjects();
+    setProjects(refreshedData);
+    setEditingProject(null);
+    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -133,14 +139,17 @@ export default function ProjectsPage() {
           className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
         >
           <AnimatePresence>
-            {projects.map((project) => (
+            {projects.map((project) => {
+              const titleShown = pickLocalized(project.titleI18n, locale);
+              const descShown = pickLocalized(project.descriptionI18n, locale);
+              return (
               <motion.div key={project.id} variants={adminStaggerItemExit} exit="exit" layout>
                 <Card className="glass-card overflow-hidden group border-border/40 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col">
                   <div className="aspect-video relative overflow-hidden bg-secondary/50">
                     {project.image ? (
                       <img
                         src={project.image}
-                        alt={project.title}
+                        alt={titleShown}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -169,10 +178,10 @@ export default function ProjectsPage() {
                   </div>
                   <CardHeader className="flex-none p-5 pb-3">
                     <div className="flex justify-between items-start gap-2">
-                       <CardTitle className="text-xl line-clamp-1">{project.title}</CardTitle>
+                       <CardTitle className="text-xl line-clamp-1">{titleShown}</CardTitle>
                        <ProjectStatusBadge status={project.status} t={t} />
                     </div>
-                    <CardDescription className="line-clamp-2 mt-2">{project.description}</CardDescription>
+                    <CardDescription className="line-clamp-2 mt-2">{descShown}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col flex-1 p-5 pt-0">
                     <div className="flex flex-wrap gap-2 mb-4 mt-auto">
@@ -215,7 +224,8 @@ export default function ProjectsPage() {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         </motion.div>
       )}

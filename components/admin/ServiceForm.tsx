@@ -4,16 +4,18 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Service } from '@/lib/data';
-import { Settings, CheckCircle2, X, DollarSign, LayoutGrid, Tag, Cpu, Eye } from 'lucide-react';
+import { Settings, CheckCircle2, X, DollarSign, LayoutGrid, Cpu } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import IconRenderer from './IconRenderer';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 import { serviceFormCategoryLabel } from '@/lib/admin-ui-labels';
+import { LocaleTextFieldGroup } from '@/components/admin/LocaleTextFieldGroup';
+import { emptyLocaleText } from '@/lib/locale-text';
+import { BilingualFormHint } from '@/components/admin/BilingualFormHint';
 
 interface ServiceFormProps {
   service?: Service | null;
@@ -24,11 +26,11 @@ interface ServiceFormProps {
 export default function ServiceForm({ service, onSave, onCancel }: ServiceFormProps) {
   const { t } = useAdminI18n();
   const [formData, setFormData] = useState<Omit<Service, 'id'>>({
-    title: '',
-    description: '',
+    titleI18n: emptyLocaleText(),
+    descriptionI18n: emptyLocaleText(),
     iconName: '',
     category: 'web',
-    features: [],
+    featuresI18n: [],
     technologies: [],
     pricing: {
       basic: '',
@@ -37,18 +39,18 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
     }
   });
 
-  const [newFeature, setNewFeature] = useState('');
+  const [newFeatureFr, setNewFeatureFr] = useState('');
   const [newTech, setNewTech] = useState('');
   const [newTechIcon, setNewTechIcon] = useState('');
 
   useEffect(() => {
     if (service) {
       setFormData({
-        title: service.title || '',
-        description: service.description || '',
+        titleI18n: { ...service.titleI18n },
+        descriptionI18n: { ...service.descriptionI18n },
         iconName: service.iconName || '',
         category: service.category || 'web',
-        features: service.features || [],
+        featuresI18n: [...service.featuresI18n],
         technologies: service.technologies || [],
         pricing: {
           basic: service.pricing?.basic || '',
@@ -56,29 +58,45 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
           premium: service.pricing?.premium || ''
         }
       });
+    } else {
+      setFormData({
+        titleI18n: emptyLocaleText(),
+        descriptionI18n: emptyLocaleText(),
+        iconName: '',
+        category: 'web',
+        featuresI18n: [],
+        technologies: [],
+        pricing: { basic: '', standard: '', premium: '' }
+      });
     }
   }, [service]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData as any);
+    onSave(formData);
   };
 
   const handleAddFeature = () => {
-    if (newFeature.trim()) {
+    if (newFeatureFr.trim()) {
       setFormData({
         ...formData,
-        features: [...formData.features, newFeature.trim()]
+        featuresI18n: [...formData.featuresI18n, { fr: newFeatureFr.trim(), en: '' }],
       });
-      setNewFeature('');
+      setNewFeatureFr('');
     }
   };
 
   const handleRemoveFeature = (index: number) => {
     setFormData({
       ...formData,
-      features: formData.features.filter((_, i) => i !== index)
+      featuresI18n: formData.featuresI18n.filter((_, i) => i !== index)
     });
+  };
+
+  const updateFeatureAt = (index: number, v: (typeof formData.featuresI18n)[0]) => {
+    const next = [...formData.featuresI18n];
+    next[index] = v;
+    setFormData({ ...formData, featuresI18n: next });
   };
 
   const addTech = () => {
@@ -126,21 +144,24 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
           <DialogDescription className="text-muted-foreground">
             {service ? t('forms.service.descEdit') : t('forms.service.descNew')}
           </DialogDescription>
+          <BilingualFormHint />
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-foreground">{t('forms.service.serviceTitle')} <span className="text-destructive">*</span></Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.service.titlePh')}
-                required
-              />
-            </div>
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  {t('forms.service.serviceTitle')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.titleI18n}
+              onChange={(titleI18n) => setFormData({ ...formData, titleI18n })}
+              requiredFr
+              inputIdPrefix="service-title"
+              placeholderFr={t('forms.service.titlePh')}
+              placeholderEn={t('forms.service.titlePhEn')}
+            />
             <div className="space-y-2">
               <Label htmlFor="category" className="text-foreground flex items-center gap-2">
                  <LayoutGrid className="h-4 w-4 text-muted-foreground" /> {t('forms.service.category')} <span className="text-destructive">*</span>
@@ -181,18 +202,20 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-foreground">{t('forms.service.description')} <span className="text-destructive">*</span></Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 resize-y min-h-[100px]"
-              placeholder={t('forms.service.descPh')}
-              required
-            />
-          </div>
+          <LocaleTextFieldGroup
+            label={
+              <>
+                {t('forms.service.description')} <span className="text-destructive">*</span>
+              </>
+            }
+            value={formData.descriptionI18n}
+            onChange={(descriptionI18n) => setFormData({ ...formData, descriptionI18n })}
+            requiredFr
+            multiline
+            inputIdPrefix="service-description"
+            placeholderFr={t('forms.service.descPh')}
+            placeholderEn={t('forms.service.descPhEn')}
+          />
 
           <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
             <Label className="text-foreground flex items-center gap-2">
@@ -238,49 +261,61 @@ export default function ServiceForm({ service, onSave, onCancel }: ServiceFormPr
             </Label>
             <div className="flex space-x-2">
               <Input
-                value={newFeature}
-                onChange={(e) => setNewFeature(e.target.value)}
+                value={newFeatureFr}
+                onChange={(e) => setNewFeatureFr(e.target.value)}
                 className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50 flex-1"
                 placeholder={t('forms.service.featurePh')}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFeature())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddFeature();
+                  }
+                }}
               />
               <Button type="button" variant="secondary" onClick={handleAddFeature}>
                 {t('forms.shared.add')}
               </Button>
             </div>
             
-            <div className="pt-2">
-              {formData.features.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-2">{t('forms.service.noFeatures')}</p>
-              ) : (
-                <ul className="space-y-2">
-                  <AnimatePresence>
-                    {formData.features.map((feature, index) => (
-                      <motion.li 
-                        key={`${feature}-${index}`}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, height: 0, scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex items-center justify-between p-2.5 bg-background border border-border/40 rounded-lg shadow-sm group"
-                      >
-                        <span className="flex items-center text-sm">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-primary mr-2 opacity-50" />
-                          {feature}
+            <div className="space-y-4 pt-2">
+              <AnimatePresence>
+                {formData.featuresI18n.map((feature, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, height: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2 }}
+                    className="relative rounded-lg border border-border/40 bg-background p-3 pr-10"
+                  >
+                    <LocaleTextFieldGroup
+                      label={
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary opacity-70" />
+                          {t('forms.service.features')} {index + 1}
                         </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
-                          onClick={() => handleRemoveFeature(index)}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </motion.li>
-                    ))}
-                  </AnimatePresence>
-                </ul>
+                      }
+                      value={feature}
+                      onChange={(v) => updateFeatureAt(index, v)}
+                      inputIdPrefix={`service-feature-${index}`}
+                      placeholderFr={t('forms.service.featurePh')}
+                      placeholderEn={t('forms.service.featurePhEn')}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleRemoveFeature(index)}
+                      aria-label={t('forms.shared.cancel')}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {formData.featuresI18n.length === 0 && (
+                <p className="text-sm text-muted-foreground italic text-center py-2">{t('forms.service.noFeatures')}</p>
               )}
             </div>
           </div>

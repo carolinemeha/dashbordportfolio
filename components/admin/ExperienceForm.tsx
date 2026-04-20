@@ -1,15 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Experience } from '@/lib/data';
 import { Briefcase, Building, MapPin, Calendar, Target, Settings2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LocaleTextFieldGroup } from '@/components/admin/LocaleTextFieldGroup';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { emptyLocaleText } from '@/lib/locale-text';
+import { BilingualFormHint } from '@/components/admin/BilingualFormHint';
 
 interface ExperienceFormProps {
   experience?: Experience | null;
@@ -17,40 +27,78 @@ interface ExperienceFormProps {
   onCancel: () => void;
 }
 
-export default function ExperienceForm({ experience, onSave, onCancel }: ExperienceFormProps) {
+export default function ExperienceForm({
+  experience,
+  onSave,
+  onCancel,
+}: ExperienceFormProps) {
   const { t } = useAdminI18n();
-  const [formData, setFormData] = useState({
-    position: experience?.position || '',
-    company: experience?.company || '',
-    location: experience?.location || '',
-    duration: experience?.duration || '',
-    achievements: experience?.achievements || [],
-    skills: experience?.skills || [],
+  const [formData, setFormData] = useState<Omit<Experience, 'id'>>({
+    positionI18n: emptyLocaleText(),
+    companyI18n: emptyLocaleText(),
+    locationI18n: emptyLocaleText(),
+    durationI18n: emptyLocaleText(),
+    achievementsI18n: [],
+    skills: [],
   });
 
   const [newAchievement, setNewAchievement] = useState('');
   const [newSkill, setNewSkill] = useState('');
 
+  useEffect(() => {
+    if (experience) {
+      setFormData({
+        positionI18n: experience.positionI18n,
+        companyI18n: experience.companyI18n,
+        locationI18n: experience.locationI18n,
+        durationI18n: experience.durationI18n,
+        achievementsI18n: [...experience.achievementsI18n],
+        skills: [...experience.skills],
+      });
+    } else {
+      setFormData({
+        positionI18n: emptyLocaleText(),
+        companyI18n: emptyLocaleText(),
+        locationI18n: emptyLocaleText(),
+        durationI18n: emptyLocaleText(),
+        achievementsI18n: [],
+        skills: [],
+      });
+    }
+  }, [experience]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData as Omit<Experience, 'id'>);
+    onSave(formData);
   };
 
   const addAchievement = () => {
-    if (newAchievement.trim() && !formData.achievements.includes(newAchievement.trim())) {
+    if (newAchievement.trim()) {
       setFormData({
         ...formData,
-        achievements: [...formData.achievements, newAchievement.trim()],
+        achievementsI18n: [
+          ...formData.achievementsI18n,
+          { fr: newAchievement.trim(), en: '' },
+        ],
       });
       setNewAchievement('');
     }
   };
 
-  const removeAchievement = (ach: string) => {
+  const removeAchievementAt = (index: number) => {
     setFormData({
       ...formData,
-      achievements: formData.achievements.filter((a) => a !== ach),
+      achievementsI18n: formData.achievementsI18n.filter((_, i) => i !== index),
     });
+  };
+
+  const updateAchievementAt = (
+    index: number,
+    v: (typeof formData.achievementsI18n)[0]
+  ) => {
+    const next = [...formData.achievementsI18n];
+    next[index] = v;
+    setFormData({ ...formData, achievementsI18n: next });
   };
 
   const addSkill = () => {
@@ -86,71 +134,74 @@ export default function ExperienceForm({ experience, onSave, onCancel }: Experie
           <DialogDescription className="text-muted-foreground">
             {experience ? t('forms.experience.descEdit') : t('forms.experience.descNew')}
           </DialogDescription>
+          <BilingualFormHint />
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="position" className="text-foreground">
-                {t('forms.experience.position')} <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="position"
-                value={formData.position}
-                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.experience.positionPh')}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company" className="text-foreground flex items-center gap-2">
-                <Building className="h-4 w-4 text-muted-foreground" /> {t('forms.experience.company')}{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="company"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.experience.companyPh')}
-                required
-              />
-            </div>
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  {t('forms.experience.position')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.positionI18n}
+              onChange={(positionI18n) => setFormData({ ...formData, positionI18n })}
+              requiredFr
+              inputIdPrefix="exp-position"
+              placeholderFr={t('forms.experience.positionPh')}
+              placeholderEn={t('forms.experience.positionPhEn')}
+            />
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  <Building className="h-4 w-4 text-muted-foreground inline mr-1" />
+                  {t('forms.experience.company')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.companyI18n}
+              onChange={(companyI18n) => setFormData({ ...formData, companyI18n })}
+              requiredFr
+              inputIdPrefix="exp-company"
+              placeholderFr={t('forms.experience.companyPh')}
+              placeholderEn={t('forms.experience.companyPhEn')}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="duration" className="text-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" /> {t('forms.experience.duration')}{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="duration"
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.experience.durationPh')}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location" className="text-foreground flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" /> {t('forms.experience.place')}
-              </Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="bg-secondary/30 border-border/50 focus-visible:ring-primary/50"
-                placeholder={t('forms.experience.placePh')}
-              />
-            </div>
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  <Calendar className="h-4 w-4 text-muted-foreground inline mr-1" />
+                  {t('forms.experience.duration')} <span className="text-destructive">*</span>
+                </>
+              }
+              value={formData.durationI18n}
+              onChange={(durationI18n) => setFormData({ ...formData, durationI18n })}
+              requiredFr
+              inputIdPrefix="exp-duration"
+              placeholderFr={t('forms.experience.durationPh')}
+              placeholderEn={t('forms.experience.durationPhEn')}
+            />
+            <LocaleTextFieldGroup
+              label={
+                <>
+                  <MapPin className="h-4 w-4 text-muted-foreground inline mr-1" />
+                  {t('forms.experience.place')}
+                </>
+              }
+              value={formData.locationI18n}
+              onChange={(locationI18n) => setFormData({ ...formData, locationI18n })}
+              inputIdPrefix="exp-location"
+              placeholderFr={t('forms.experience.placePh')}
+              placeholderEn={t('forms.experience.placePhEn')}
+            />
           </div>
 
           <div className="space-y-3 p-4 bg-secondary/10 rounded-xl border border-border/30">
             <Label className="text-foreground flex items-center gap-2">
-              <Target className="h-4 w-4 text-muted-foreground" /> {t('forms.experience.achievements')}
+              <Target className="h-4 w-4 text-muted-foreground" />{' '}
+              {t('forms.experience.achievements')}
             </Label>
             <div className="flex space-x-2">
               <Input
@@ -169,41 +220,49 @@ export default function ExperienceForm({ experience, onSave, onCancel }: Experie
                 {t('forms.shared.add')}
               </Button>
             </div>
-            <div className="flex flex-col gap-2 pt-2 min-h-[32px]">
+            <div className="space-y-3 pt-2">
               <AnimatePresence>
-                {formData.achievements.map((ach) => (
+                {formData.achievementsI18n.map((ach, index) => (
                   <motion.div
-                    key={ach}
+                    key={index}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex justify-between items-center bg-background/50 border border-border/40 p-2 rounded-md text-sm"
+                    className="relative rounded-lg border border-border/40 bg-background/50 p-3 pr-10"
                   >
-                    <span>{ach}</span>
+                    <LocaleTextFieldGroup
+                      label={`${t('forms.experience.achievements')} ${index + 1}`}
+                      value={ach}
+                      onChange={(v) => updateAchievementAt(index, v)}
+                      multiline
+                      inputIdPrefix={`exp-ach-${index}`}
+                      placeholderFr={t('forms.experience.achLinePh')}
+                      placeholderEn={t('forms.experience.achLinePhEn')}
+                    />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeAchievement(ach)}
+                      className="absolute right-1 top-1 h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeAchievementAt(index)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </motion.div>
                 ))}
-                {formData.achievements.length === 0 && (
-                  <span className="text-sm text-muted-foreground italic flex items-center">
-                    {t('forms.experience.noAch')}
-                  </span>
-                )}
               </AnimatePresence>
+              {formData.achievementsI18n.length === 0 && (
+                <span className="text-sm text-muted-foreground italic">
+                  {t('forms.experience.noAch')}
+                </span>
+              )}
             </div>
           </div>
 
           <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
             <Label className="text-foreground flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-muted-foreground" /> {t('forms.experience.skillsUsed')}
+              <Settings2 className="h-4 w-4 text-muted-foreground" />{' '}
+              {t('forms.experience.skillsUsed')}
             </Label>
             <div className="flex space-x-2">
               <Input
@@ -244,12 +303,12 @@ export default function ExperienceForm({ experience, onSave, onCancel }: Experie
                     </Badge>
                   </motion.div>
                 ))}
-                {formData.skills.length === 0 && (
-                  <span className="text-sm text-muted-foreground italic flex items-center">
-                    {t('forms.experience.noSkills')}
-                  </span>
-                )}
               </AnimatePresence>
+              {formData.skills.length === 0 && (
+                <span className="text-sm text-muted-foreground italic flex items-center">
+                  {t('forms.experience.noSkills')}
+                </span>
+              )}
             </div>
           </div>
 
@@ -257,7 +316,10 @@ export default function ExperienceForm({ experience, onSave, onCancel }: Experie
             <Button type="button" variant="ghost" onClick={onCancel}>
               {t('forms.shared.cancel')}
             </Button>
-            <Button type="submit" className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25">
+            <Button
+              type="submit"
+              className="bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25"
+            >
               {experience ? t('forms.shared.saveChanges') : t('forms.experience.addExp')}
             </Button>
           </DialogFooter>

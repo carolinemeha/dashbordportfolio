@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { adminStaggerContainer, adminStaggerItem } from '@/lib/admin-motion';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import { pickLocalized } from '@/lib/locale-text';
+import { toast } from 'sonner';
 
 function TestimonialAvatar({ name, src }: { name: string; src: string }) {
   const [broken, setBroken] = useState(false);
@@ -31,7 +33,7 @@ function TestimonialAvatar({ name, src }: { name: string; src: string }) {
 }
 
 export default function TestimonialsPage() {
-  const { t, dateLocale } = useAdminI18n();
+  const { t, dateLocale, locale } = useAdminI18n();
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null);
@@ -46,22 +48,26 @@ export default function TestimonialsPage() {
 
   const handleCreate = async (testimonialData: Omit<Testimonial, 'id'>) => {
     const newTestimonial = await dataService.createTestimonial(testimonialData);
-    if (newTestimonial) {
-      const refreshedData = await dataService.getTestimonials();
-      setTestimonials(refreshedData);
-      setIsFormOpen(false);
-      setEditingTestimonial(null);
+    if (!newTestimonial) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getTestimonials();
+    setTestimonials(refreshedData);
+    setIsFormOpen(false);
+    setEditingTestimonial(null);
   };
 
   const handleUpdate = async (id: string, updates: Partial<Testimonial>) => {
     const updated = await dataService.updateTestimonial(id, updates);
-    if (updated) {
-      const refreshedData = await dataService.getTestimonials();
-      setTestimonials(refreshedData);
-      setEditingTestimonial(null);
-      setIsFormOpen(false);
+    if (!updated) {
+      toast.error(t('forms.shared.saveError'));
+      return;
     }
+    const refreshedData = await dataService.getTestimonials();
+    setTestimonials(refreshedData);
+    setEditingTestimonial(null);
+    setIsFormOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -131,20 +137,24 @@ export default function TestimonialsPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           <AnimatePresence>
-            {sortedTestimonials.map((testimonial) => (
+            {sortedTestimonials.map((testimonial) => {
+              const nameShown = pickLocalized(testimonial.nameI18n, locale);
+              const roleShown = pickLocalized(testimonial.roleI18n, locale);
+              const contentShown = pickLocalized(testimonial.contentI18n, locale);
+              return (
               <motion.div key={testimonial.id} variants={adminStaggerItem} layout exit={{ opacity: 0, scale: 0.9 }}>
                 <Card className="glass-card h-full flex flex-col hover:border-primary/50 transition-colors group text-foreground">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden border border-border flex items-center justify-center shrink-0">
-                          <TestimonialAvatar name={testimonial.name} src={testimonial.avatar ?? ''} />
+                          <TestimonialAvatar name={nameShown} src={testimonial.avatar ?? ''} />
                         </div>
                         <div className="overflow-hidden">
-                          <CardTitle className="text-base leading-tight group-hover:text-primary transition-colors truncate">{testimonial.name}</CardTitle>
+                          <CardTitle className="text-base leading-tight group-hover:text-primary transition-colors truncate">{nameShown}</CardTitle>
                           <CardDescription className="text-xs mt-0.5 max-w-full truncate flex items-center gap-1">
                             <Briefcase className="h-3 w-3 inline opacity-70" />
-                            {testimonial.role}
+                            {roleShown}
                           </CardDescription>
                         </div>
                       </div>
@@ -186,7 +196,7 @@ export default function TestimonialsPage() {
                       )}
                       <p className="text-foreground/80 italic text-sm leading-relaxed line-clamp-4 relative">
                         <span className="text-3xl text-primary/20 absolute -top-3 -left-2 leading-none font-serif">&quot;</span>
-                        <span className="pl-3 relative z-10">{testimonial.content}</span>
+                        <span className="pl-3 relative z-10">{contentShown}</span>
                       </p>
                     </div>
                     {testimonial.date && (
@@ -202,7 +212,8 @@ export default function TestimonialsPage() {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         </motion.div>
       )}
