@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className="h-full" suppressHydrationWarning>
       <body
-        className={`${inter.className} h-full min-h-0 overflow-hidden antialiased`}
+        className={`${inter.className} h-full min-h-0 antialiased`}
         suppressHydrationWarning
       >
         <Providers>{children}</Providers>
