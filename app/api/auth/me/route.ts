@@ -3,18 +3,24 @@ import { cookies } from 'next/headers';
 import { verifyToken, JWT_COOKIE } from '@/lib/auth-server';
 import { supabase } from '@/lib/supabase';
 import { fromDbJson, pickLocalized } from '@/lib/locale-text';
+import {
+  adminApiMsgs,
+  getAdminLocaleFromServerCookies,
+} from '@/lib/admin-api-i18n';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   // In Next.js 13 Route Handlers, cookies() is safe for reading
+  const apiLocale = getAdminLocaleFromServerCookies();
+  const msgs = adminApiMsgs(apiLocale);
   const token = cookies().get(JWT_COOKIE)?.value;
 
   if (!token) {
-    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    return NextResponse.json({ error: msgs.notAuthenticated }, { status: 401 });
   }
 
   const payload = await verifyToken(token);
   if (!payload) {
-    return NextResponse.json({ error: 'Token invalide' }, { status: 401 });
+    return NextResponse.json({ error: msgs.invalidToken }, { status: 401 });
   }
 
   const { data: about } = await supabase
@@ -40,14 +46,14 @@ export async function GET(req: NextRequest) {
   );
 
   const displayName =
-    pickLocalized(nameI18n, 'fr').trim() || payload.name;
+    pickLocalized(nameI18n, apiLocale).trim() || payload.name;
   const publicEmail =
     about?.email != null && String(about.email).trim() !== ''
       ? String(about.email).trim()
       : null;
 
-  const titleShown = pickLocalized(titleI18n, 'fr').trim();
-  const locationShown = pickLocalized(locationI18n, 'fr').trim();
+  const titleShown = pickLocalized(titleI18n, apiLocale).trim();
+  const locationShown = pickLocalized(locationI18n, apiLocale).trim();
 
   return NextResponse.json({
     id: payload.sub,

@@ -2,15 +2,20 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken, JWT_COOKIE } from '@/lib/auth-server';
 import { supabase } from '@/lib/supabase';
+import {
+  adminApiMsgs,
+  getAdminLocaleFromServerCookies,
+} from '@/lib/admin-api-i18n';
 
 /**
  * Diagnostic léger : variables d’environnement publiques et lecture table `about`.
  * Ne renvoie aucun secret.
  */
 export async function GET() {
+  const msgs = adminApiMsgs(getAdminLocaleFromServerCookies());
   const token = cookies().get(JWT_COOKIE)?.value;
   if (!token || !(await verifyToken(token))) {
-    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    return NextResponse.json({ error: msgs.notAuthenticated }, { status: 401 });
   }
 
   const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim());

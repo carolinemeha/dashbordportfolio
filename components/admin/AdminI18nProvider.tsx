@@ -7,6 +7,7 @@ import {
   patchAdminPreferences,
 } from '@/lib/admin-preferences';
 import { isAdminLocale, type AdminLocale } from '@/lib/admin-locale';
+import { setAdminLocaleCookieOnClient } from '@/lib/admin-locale-cookie';
 import fr from '@/messages/admin-fr.json';
 import frMore from '@/messages/admin-more-fr.json';
 import en from '@/messages/admin-en.json';
@@ -72,13 +73,16 @@ export function AdminI18nProvider({
   const [locale, setLocaleState] = React.useState<AdminLocale>('fr');
 
   React.useLayoutEffect(() => {
-    setLocaleState(readLocaleFromStorage());
+    const l = readLocaleFromStorage();
+    setLocaleState(l);
+    setAdminLocaleCookieOnClient(l);
   }, []);
 
   React.useEffect(() => {
     const sync = () => {
       const l = readLocaleFromStorage();
       setLocaleState(l);
+      setAdminLocaleCookieOnClient(l);
     };
     window.addEventListener(ADMIN_PREFERENCES_EVENT, sync);
     const onStorage = (e: StorageEvent) => {
@@ -93,6 +97,7 @@ export function AdminI18nProvider({
 
   const setLocale = React.useCallback((l: AdminLocale) => {
     setLocaleState(l);
+    setAdminLocaleCookieOnClient(l);
     patchAdminPreferences({ locale: l });
   }, []);
 

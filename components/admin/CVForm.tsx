@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CVInfo } from '@/lib/data';
 import { FileText, Link as LinkIcon, HardDrive, Upload, Loader2, CheckCircle2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 
@@ -60,17 +59,21 @@ export default function CVForm({ cv, onSave, onCancel }: CVFormProps) {
 
     try {
       setIsUploading(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `cv_${Date.now()}.${fileExt}`;
-      const filePath = `cv/${fileName}`;
+      const formDataUp = new FormData();
+      formDataUp.append('file', file);
+      formDataUp.append('bucket', 'portfolio');
+      formDataUp.append('path', 'cv');
 
-      const { error } = await supabase.storage.from('portfolio').upload(filePath, file);
-
-      if (error) throw error;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formDataUp,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? 'upload');
+      }
+      const publicUrl = data.url as string;
 
       setFormData({
         ...formData,

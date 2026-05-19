@@ -247,18 +247,56 @@ ALTER TABLE certifications ADD COLUMN IF NOT EXISTS issuer_i18n JSONB;
 -- Données existantes : copier les colonnes TEXT / TEXT[] vers *_i18n (FR + EN vide).
 -- Exécuter une fois sur une base déjà peuplée : lib/migrations/backfill_i18n_from_legacy.sql
 
--- Désactivation RLS pour l'administration simplifiée
-ALTER TABLE about DISABLE ROW LEVEL SECURITY;
-ALTER TABLE projects DISABLE ROW LEVEL SECURITY;
-ALTER TABLE experiences DISABLE ROW LEVEL SECURITY;
-ALTER TABLE education DISABLE ROW LEVEL SECURITY;
-ALTER TABLE skills DISABLE ROW LEVEL SECURITY;
-ALTER TABLE services DISABLE ROW LEVEL SECURITY;
-ALTER TABLE testimonials DISABLE ROW LEVEL SECURITY;
-ALTER TABLE certifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE contact_messages DISABLE ROW LEVEL SECURITY;
-ALTER TABLE page_views DISABLE ROW LEVEL SECURITY;
-ALTER TABLE cv_downloads DISABLE ROW LEVEL SECURITY;
-ALTER TABLE cv_info DISABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_console_settings DISABLE ROW LEVEL SECURITY;
+-- RLS : activer sur toutes les tables. Anon = SELECT about + INSERT contact_messages seulement ;
+-- l’admin passe par la clé service (voir /api/admin/db). Détail : lib/migrations/enable_rls.sql
+
+ALTER TABLE about ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experiences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE education ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE page_views ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cv_downloads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cv_info ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_console_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS portfolio_anon_auth_all_about ON about;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_projects ON projects;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_experiences ON experiences;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_education ON education;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_skills ON skills;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_services ON services;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_testimonials ON testimonials;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_certifications ON certifications;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_contact_messages ON contact_messages;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_page_views ON page_views;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_cv_downloads ON cv_downloads;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_cv_info ON cv_info;
+DROP POLICY IF EXISTS portfolio_anon_auth_all_admin_console_settings ON admin_console_settings;
+
+DROP POLICY IF EXISTS portfolio_public_select_about ON about;
+CREATE POLICY portfolio_public_select_about ON about FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_anon_insert_contact ON contact_messages;
+CREATE POLICY portfolio_anon_insert_contact ON contact_messages FOR INSERT TO anon WITH CHECK ((select auth.role()) = 'anon');
+
+-- Lectures publiques vitrine (clé anon) — alignées sur Myporfolio/lib/public*.ts
+DROP POLICY IF EXISTS portfolio_public_select_projects ON projects;
+CREATE POLICY portfolio_public_select_projects ON projects FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_experiences ON experiences;
+CREATE POLICY portfolio_public_select_experiences ON experiences FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_education ON education;
+CREATE POLICY portfolio_public_select_education ON education FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_skills ON skills;
+CREATE POLICY portfolio_public_select_skills ON skills FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_services ON services;
+CREATE POLICY portfolio_public_select_services ON services FOR SELECT TO anon, authenticated USING (true);
 

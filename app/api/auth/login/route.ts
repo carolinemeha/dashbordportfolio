@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { signToken, JWT_COOKIE } from '@/lib/auth-server';
+import { adminApiMsgs, getAdminLocaleFromRequest } from '@/lib/admin-api-i18n';
 
 export async function POST(req: NextRequest) {
+  const locale = getAdminLocaleFromRequest(req);
+  const msgs = adminApiMsgs(locale);
   try {
     const { email, password } = await req.json();
 
@@ -10,14 +13,14 @@ export async function POST(req: NextRequest) {
 
     if (!adminPassword) {
       return NextResponse.json(
-        { error: 'Configuration serveur manquante' },
+        { error: msgs.missingServerConfig },
         { status: 500 }
       );
     }
 
     if (email !== adminEmail || password !== adminPassword.trim()) {
       return NextResponse.json(
-        { error: 'Email ou mot de passe incorrect' },
+        { error: msgs.invalidCredentials },
         { status: 401 }
       );
     }
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
     return response;
   } catch {
     return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
+      { error: msgs.internalServerError },
       { status: 500 }
     );
   }

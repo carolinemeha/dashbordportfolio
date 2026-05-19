@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyToken, JWT_COOKIE } from '@/lib/auth-server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import {
+  adminApiMsgs,
+  getAdminLocaleFromServerCookies,
+} from '@/lib/admin-api-i18n';
 
 export async function POST(req: NextRequest) {
+  const msgs = adminApiMsgs(getAdminLocaleFromServerCookies());
   // Vérifier l'auth
   const token = cookies().get(JWT_COOKIE)?.value;
   if (!token || !(await verifyToken(token))) {
-    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    return NextResponse.json({ error: msgs.notAuthenticated }, { status: 401 });
   }
 
   try {
@@ -17,7 +22,7 @@ export async function POST(req: NextRequest) {
     const path = (formData.get('path') as string) || 'uploads';
 
     if (!file) {
-      return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 });
+      return NextResponse.json({ error: msgs.noFileProvided }, { status: 400 });
     }
 
     // Validation type
@@ -26,16 +31,17 @@ export async function POST(req: NextRequest) {
       'application/pdf',
     ];
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Type de fichier invalide (images ou PDF uniquement)' }, { status: 400 });
+      return NextResponse.json({ error: msgs.invalidFileType }, { status: 400 });
     }
 
     // Validation taille (10 Mo max pour PDF, 5 Mo pour images)
     const maxSize = file.type === 'application/pdf' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: `Fichier trop lourd (max ${file.type === 'application/pdf' ? '10' : '5'} Mo)` },
-        { status: 400 }
-      );
+      const sizeMsg =
+        file.type === 'application/pdf'
+          ? msgs.fileTooLargePdf
+          : msgs.fileTooLargeImage;
+      return NextResponse.json({ error: sizeMsg }, { status: 400 });
     }
 
     const fileExt = file.name.split('.').pop() ?? 'jpg';
@@ -57,7 +63,7 @@ export async function POST(req: NextRequest) {
     if (uploadError) {
       console.error('Supabase upload error:', uploadError);
       return NextResponse.json(
-        { error: `Erreur Supabase: ${uploadError.message}` },
+        { error: `${msgs.uploadSupabasePrefix}${uploadError.message}` },
         { status: 500 }
       );
     }
@@ -69,6 +75,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: publicUrl, path: filePath });
   } catch (err: any) {
     console.error('Upload route error:', err);
-    return NextResponse.json({ error: err.message ?? 'Erreur interne' }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message ?? msgs.uploadInternalFallback },
+      { status: 500 }
+    );
   }
 }

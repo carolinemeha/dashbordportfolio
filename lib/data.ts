@@ -1,8 +1,5 @@
-import { supabase } from './supabase';
-
-function logSupabase(op: string, err: unknown) {
-  console.error(`[dataService:${op}]`, err);
-}
+import { adminRpc } from './admin-rpc';
+import { runAdminDataOp } from './admin-data-ops';
 import {
   normalizeAdminPreferences,
   type AdminPreferencesV1,
@@ -15,6 +12,27 @@ import {
   primaryForLegacyColumn,
   toDbJson,
 } from './locale-text';
+
+function logSupabase(op: string, err: unknown) {
+  console.error(`[dataService:${op}]`, err);
+}
+
+const IS_BROWSER = typeof window !== 'undefined';
+
+async function adminOp<T>(
+  op: string,
+  args: unknown,
+  mapFn: (raw: unknown) => T
+): Promise<T> {
+  let raw: unknown;
+  if (IS_BROWSER) {
+    raw = await adminRpc<unknown>(op, args);
+  } else {
+    const { supabaseAdmin } = await import('./supabase-admin');
+    raw = await runAdminDataOp(supabaseAdmin, op, args);
+  }
+  return mapFn(raw);
+}
 
 /** Ligne unique des préférences console (à créer en base si absente). */
 const ADMIN_CONSOLE_SETTINGS_ID = '00000000-0000-0000-0000-000000000002';
@@ -67,14 +85,7 @@ export interface Project {
   featured?: boolean;
 }
 
-function dashActivityText(
-  json: unknown,
-  legacy: string | null | undefined
-): string {
-  return primaryForLegacyColumn(fromDbJson(json, legacy), 'fr');
-}
-
-function mapProjectRow(row: Record<string, unknown>): Project {
+export function mapProjectRow(row: Record<string, unknown>): Project {
   const titleI18n = fromDbJson(row.title_i18n, row.title as string | null);
   const descriptionI18n = fromDbJson(
     row.description_i18n,
@@ -126,7 +137,7 @@ export function projectInsertPayload(project: Omit<Project, 'id'>) {
   };
 }
 
-function projectUpdatePayload(updates: Partial<Project>): Record<string, unknown> {
+export function projectUpdatePayload(updates: Partial<Project>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (updates.titleI18n !== undefined) {
     out.title_i18n = toDbJson(updates.titleI18n);
@@ -157,7 +168,7 @@ export interface Experience {
   skills: string[];
 }
 
-function mapExperienceRow(row: Record<string, unknown>): Experience {
+export function mapExperienceRow(row: Record<string, unknown>): Experience {
   return {
     id: String(row.id ?? ''),
     companyI18n: fromDbJson(row.company_i18n, row.company as string | null),
@@ -208,7 +219,7 @@ export interface Skill {
   iconName?: string;
 }
 
-function mapSkillFromRow(row: Record<string, unknown>): Skill {
+export function mapSkillFromRow(row: Record<string, unknown>): Skill {
   const cat = row.category as string | undefined;
   const valid: Skill['category'][] = [
     'Frontend',
@@ -384,7 +395,7 @@ function mapContactRow(row: Record<string, unknown>): ContactMessage {
   };
 }
 
-function mapEducationRow(row: Record<string, unknown>): Education {
+export function mapEducationRow(row: Record<string, unknown>): Education {
   return {
     id: String(row.id ?? ''),
     institutionI18n: fromDbJson(
@@ -454,7 +465,7 @@ export function testimonialToDbPayload(t: Partial<Testimonial>): Record<string, 
   return out;
 }
 
-function mapCertificationRow(row: Record<string, unknown>): Certification {
+export function mapCertificationRow(row: Record<string, unknown>): Certification {
   return {
     id: String(row.id ?? ''),
     titleI18n: fromDbJson(row.title_i18n, row.title as string | null),
@@ -480,7 +491,7 @@ export function certificationToDbPayload(c: Partial<Certification>): Record<stri
   return out;
 }
 
-function mapServiceRow(row: Record<string, unknown>): Service {
+export function mapServiceRow(row: Record<string, unknown>): Service {
   const technologiesRaw = row.technologies;
   const technologies = Array.isArray(technologiesRaw)
     ? (technologiesRaw as string[]).map((t: string) => {
@@ -540,7 +551,7 @@ export function serviceToDbPayload(s: Partial<Service>): Record<string, unknown>
   return out;
 }
 
-function mapAboutRowToInfo(data: Record<string, unknown>): AboutInfo {
+export function mapAboutRowToInfo(data: Record<string, unknown>): AboutInfo {
   const rolesLegacy = Array.isArray(data.roles) ? (data.roles as string[]) : [];
   return {
     nameI18n: fromDbJson(data.name_i18n, data.name as string | null),
@@ -1184,42 +1195,39 @@ let cvInfo: CVInfo | null = {
 export const dataService = {
   // Projects
   async getProjects(): Promise<Project[]> {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('date', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching projects:', error);
+    try {
+      return await adminOp('projects.list', {}, (raw) => {
+        const rows = raw as Record<string, unknown>[] | null;
+        return (rows ?? []).map((p) => mapProjectRow(p));
+      });
+    } catch (e) {
+      console.error('Error fetching projects:', e);
       return [];
     }
-    
-    return data.map((p) => mapProjectRow(p as Record<string, unknown>));
   },
 
   async getProject(id: string): Promise<Project | null> {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    
-    if (error || !data) return null;
-    return mapProjectRow(data as Record<string, unknown>);
+    try {
+      return await adminOp('projects.get', { id }, (raw) => {
+        if (!raw) return null;
+        return mapProjectRow(raw as Record<string, unknown>);
+      });
+    } catch {
+      return null;
+    }
   },
 
   async createProject(project: Omit<Project, 'id'>): Promise<Project | null> {
-    const { data, error } = await supabase
-      .from('projects')
-      .insert(projectInsertPayload(project))
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error creating project:', error);
+    try {
+      const payload = projectInsertPayload(project);
+      return await adminOp('projects.create', { payload }, (raw) => {
+        if (!raw) return null;
+        return mapProjectRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      console.error('Error creating project:', e);
       return null;
     }
-    return data ? mapProjectRow(data as Record<string, unknown>) : null;
   },
 
   async updateProject(id: string, updates: Partial<Project>): Promise<Project | null> {
@@ -1227,81 +1235,95 @@ export const dataService = {
     if (Object.keys(mappedUpdates).length === 0) {
       return this.getProject(id);
     }
-
-    const { data, error } = await supabase
-      .from('projects')
-      .update(mappedUpdates)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error updating project:', error);
+    try {
+      return await adminOp('projects.update', { id, payload: mappedUpdates }, (raw) => {
+        if (!raw) return null;
+        return mapProjectRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      console.error('Error updating project:', e);
       return null;
     }
-    return data ? mapProjectRow(data as Record<string, unknown>) : null;
   },
 
   async deleteProject(id: string): Promise<boolean> {
-    const { error } = await supabase.from('projects').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('projects.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // Experiences
   async getExperiences(): Promise<Experience[]> {
-    const { data, error } = await supabase.from('experiences').select('*').order('created_at', { ascending: false });
-    return error || !data ? [] : data.map((row) => mapExperienceRow(row as Record<string, unknown>));
+    try {
+      return await adminOp('experiences.list', {}, (raw) => {
+        const data = raw as Record<string, unknown>[] | null;
+        return (data ?? []).map((row) => mapExperienceRow(row));
+      });
+    } catch {
+      return [];
+    }
   },
 
   async getExperience(id: string): Promise<Experience | null> {
-    const { data, error } = await supabase.from('experiences').select('*').eq('id', id).maybeSingle();
-    if (error || !data) return null;
-    return mapExperienceRow(data as Record<string, unknown>);
+    try {
+      return await adminOp('experiences.get', { id }, (raw) => {
+        if (!raw) return null;
+        return mapExperienceRow(raw as Record<string, unknown>);
+      });
+    } catch {
+      return null;
+    }
   },
 
   async createExperience(experience: Omit<Experience, 'id'>): Promise<Experience | null> {
     const payload = experienceToDbPayload(experience);
-    const { data, error } = await supabase.from('experiences').insert(payload).select().maybeSingle();
-    if (error) {
-      logSupabase('createExperience', error);
+    try {
+      return await adminOp('experiences.create', { payload }, (raw) => {
+        if (!raw) return null;
+        return mapExperienceRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('createExperience', e);
       return null;
     }
-    if (!data) return null;
-    return mapExperienceRow(data as Record<string, unknown>);
   },
 
   async updateExperience(id: string, updates: Partial<Experience>): Promise<Experience | null> {
     const payload = experienceToDbPayload(updates);
     if (Object.keys(payload).length === 0) return this.getExperience(id);
-    const { data, error } = await supabase.from('experiences').update(payload).eq('id', id).select().maybeSingle();
-    if (error) {
-      logSupabase('updateExperience', error);
+    try {
+      return await adminOp('experiences.update', { id, payload }, (raw) => {
+        if (!raw) return null;
+        return mapExperienceRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('updateExperience', e);
       return null;
     }
-    if (!data) return null;
-    return mapExperienceRow(data as Record<string, unknown>);
   },
 
   async deleteExperience(id: string): Promise<boolean> {
-    const { error } = await supabase.from('experiences').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('experiences.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // Skills
   async getSkills(): Promise<Skill[]> {
     try {
-      const { data, error } = await supabase
-        .from('skills')
-        .select('*')
-        .order('name', { ascending: true });
-      if (error || !data || data.length === 0) {
+      const data = await adminOp('skills.list', {}, (raw) => raw as Record<string, unknown>[] | null);
+      if (!data || data.length === 0) {
         return skills.map((s) => ({
           ...s,
           iconName: s.iconName ?? '',
         }));
       }
-      return data.map((row) => mapSkillFromRow(row as Record<string, unknown>));
-    } catch (e) {
+      return data.map((row) => mapSkillFromRow(row));
+    } catch {
       return skills.map((s) => ({
         ...s,
         iconName: s.iconName ?? '',
@@ -1310,67 +1332,73 @@ export const dataService = {
   },
 
   async createSkill(skill: Omit<Skill, 'id'>): Promise<Skill | null> {
-    const { data, error } = await supabase
-      .from('skills')
-      .insert({
-        ...skillToDbPayload(skill),
-        level: skill.level ?? 0,
-        category: skill.category,
-        icon_name: skill.iconName?.trim() || null,
-      })
-      .select()
-      .maybeSingle();
-    if (error) {
-      logSupabase('createSkill', error);
+    const payload = {
+      ...skillToDbPayload(skill),
+      level: skill.level ?? 0,
+      category: skill.category,
+      icon_name: skill.iconName?.trim() || null,
+    };
+    try {
+      return await adminOp('skills.create', { payload }, (raw) => {
+        if (!raw) return null;
+        return mapSkillFromRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('createSkill', e);
       return null;
     }
-    return data ? mapSkillFromRow(data as Record<string, unknown>) : null;
   },
 
   async updateSkill(id: string, updates: Partial<Skill>): Promise<Skill | null> {
-    const payload = skillToDbPayload(updates);
-    const { data, error } = await supabase
-      .from('skills')
-      .update({
-        ...payload,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-    if (error) {
-      logSupabase('updateSkill', error);
+    const payload = {
+      ...skillToDbPayload(updates),
+      updated_at: new Date().toISOString(),
+    };
+    try {
+      return await adminOp('skills.update', { id, payload }, (raw) => {
+        if (!raw) return null;
+        return mapSkillFromRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('updateSkill', e);
       return null;
     }
-    return data ? mapSkillFromRow(data as Record<string, unknown>) : null;
   },
 
   async deleteSkill(id: string): Promise<boolean> {
-    const { error } = await supabase.from('skills').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('skills.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // Services
   async getServices(): Promise<Service[]> {
-    const { data, error } = await supabase.from('services').select('*').order('created_at', { ascending: true });
-    if (error || !data) return [];
-    return data.map((row) => mapServiceRow(row as Record<string, unknown>));
+    try {
+      return await adminOp('services.list', {}, (raw) => {
+        const data = raw as Record<string, unknown>[] | null;
+        return (data ?? []).map((row) => mapServiceRow(row));
+      });
+    } catch {
+      return [];
+    }
   },
 
   async createService(service: Omit<Service, 'id'>): Promise<Service | null> {
-    const { data, error } = await supabase
-      .from('services')
-      .insert({
+    try {
+      const payload = {
         ...serviceToDbPayload(service),
         pricing: service.pricing,
-      })
-      .select()
-      .maybeSingle();
-    if (error) {
-      console.error('Erreur createService:', error);
+      };
+      return await adminOp('services.create', { payload }, (raw) => {
+        if (!raw) return null;
+        return mapServiceRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      console.error('Erreur createService:', e);
       return null;
     }
-    return data ? mapServiceRow(data as Record<string, unknown>) : null;
   },
 
   async updateService(id: string, updates: Partial<Service>): Promise<Service | null> {
@@ -1384,42 +1412,38 @@ export const dataService = {
       mappedUpdates.icon_name = updates.iconName?.trim() || null;
     }
     if (Object.keys(mappedUpdates).length === 0) {
-      const cur = await supabase.from('services').select('*').eq('id', id).maybeSingle();
-      return cur.data ? mapServiceRow(cur.data as Record<string, unknown>) : null;
+      try {
+        const cur = await adminOp('services.get', { id }, (raw) => raw as Record<string, unknown> | null);
+        return cur ? mapServiceRow(cur) : null;
+      } catch {
+        return null;
+      }
     }
-    const { data, error } = await supabase
-      .from('services')
-      .update(mappedUpdates)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-    if (error) {
-      console.error('Erreur updateService:', error);
+    try {
+      return await adminOp('services.update', { id, payload: mappedUpdates }, (raw) => {
+        if (!raw) return null;
+        return mapServiceRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      console.error('Erreur updateService:', e);
       return null;
     }
-    return data ? mapServiceRow(data as Record<string, unknown>) : null;
   },
 
   async deleteService(id: string): Promise<boolean> {
-    const { error } = await supabase.from('services').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('services.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // About info
   async getAboutInfo(): Promise<AboutInfo | null> {
     try {
-      const { data, error } = await supabase.from('about').select('*').limit(1).maybeSingle();
-      
-      if (error) {
-        console.error('getAboutInfo error:', error);
-        return aboutInfo;
-      }
-
-      if (!data) {
-        return aboutInfo; // mock values if DB is empty
-      }
-
-      const mapped = mapAboutRowToInfo(data as Record<string, unknown>);
+      const data = await adminOp('about.get', {}, (raw) => raw as Record<string, unknown> | null);
+      if (!data) return aboutInfo;
+      const mapped = mapAboutRowToInfo(data);
       const asInt = (v: unknown): number | undefined => {
         if (v == null) return undefined;
         if (typeof v === 'number' && !Number.isNaN(v)) return v;
@@ -1435,7 +1459,7 @@ export const dataService = {
           asInt(data.home_stat_satisfaction) ?? mapped.homeStatSatisfaction,
       };
     } catch (e) {
-      console.error('Unexpected error in getAboutInfo:', e);
+      console.error('getAboutInfo error:', e);
       return aboutInfo;
     }
   },
@@ -1443,104 +1467,94 @@ export const dataService = {
   async updateAboutInfo(updates: Partial<AboutInfo>): Promise<AboutInfo | null> {
     const dbPayload = aboutInfoToDbPayload(updates);
     dbPayload.updated_at = new Date().toISOString();
-
-    // Check if a row already exists (about is a singleton table)
-    const { data: existing } = await supabase.from('about').select('id').limit(1).maybeSingle();
-
-    let data: any, error: any;
-
-    if (existing?.id) {
-      // UPDATE existing row by its UUID
-      ({ data, error } = await supabase
-        .from('about')
-        .update(dbPayload)
-        .eq('id', existing.id)
-        .select()
-        .maybeSingle());
-    } else {
-      // INSERT first row
-      ({ data, error } = await supabase
-        .from('about')
-        .insert(dbPayload)
-        .select()
-        .maybeSingle());
-    }
-
-    if (error) {
-      console.error('updateAboutInfo error:', error);
+    try {
+      const data = await adminOp('about.upsert', { payload: dbPayload }, (raw) => raw as Record<string, unknown> | null);
+      if (!data) return null;
+      const mapped = mapAboutRowToInfo(data);
+      const asInt = (v: unknown): number | undefined => {
+        if (v == null) return undefined;
+        if (typeof v === 'number' && !Number.isNaN(v)) return v;
+        const n = parseInt(String(v), 10);
+        return Number.isNaN(n) ? undefined : n;
+      };
+      return {
+        ...mapped,
+        homeStatYears: asInt(data.home_stat_years) ?? mapped.homeStatYears,
+        homeStatProjects: asInt(data.home_stat_projects) ?? mapped.homeStatProjects,
+        homeStatClients: asInt(data.home_stat_clients) ?? mapped.homeStatClients,
+        homeStatSatisfaction:
+          asInt(data.home_stat_satisfaction) ?? mapped.homeStatSatisfaction,
+      };
+    } catch (e) {
+      console.error('updateAboutInfo error:', e);
       return null;
     }
-
-    if (!data) return null;
-    const mapped = mapAboutRowToInfo(data as Record<string, unknown>);
-    const asInt = (v: unknown): number | undefined => {
-      if (v == null) return undefined;
-      if (typeof v === 'number' && !Number.isNaN(v)) return v;
-      const n = parseInt(String(v), 10);
-      return Number.isNaN(n) ? undefined : n;
-    };
-    return {
-      ...mapped,
-      homeStatYears: asInt(data.home_stat_years) ?? mapped.homeStatYears,
-      homeStatProjects: asInt(data.home_stat_projects) ?? mapped.homeStatProjects,
-      homeStatClients: asInt(data.home_stat_clients) ?? mapped.homeStatClients,
-      homeStatSatisfaction:
-        asInt(data.home_stat_satisfaction) ?? mapped.homeStatSatisfaction,
-    };
   },
 
   // Education
   async getEducation(): Promise<Education[]> {
-    const { data, error } = await supabase.from('education').select('*').order('duration', { ascending: false });
-    return error || !data
-      ? []
-      : data.map((row) => mapEducationRow(row as Record<string, unknown>));
+    try {
+      return await adminOp('education.list', {}, (raw) => {
+        const data = raw as Record<string, unknown>[] | null;
+        return (data ?? []).map((row) => mapEducationRow(row));
+      });
+    } catch {
+      return [];
+    }
   },
 
   async createEducation(education: Omit<Education, 'id'>): Promise<Education | null> {
-    const { data, error } = await supabase
-      .from('education')
-      .insert(educationToDbPayload(education))
-      .select()
-      .maybeSingle();
-    if (error) {
-      logSupabase('createEducation', error);
+    try {
+      const payload = educationToDbPayload(education);
+      return await adminOp('education.create', { payload }, (raw) => {
+        if (!raw) return null;
+        return mapEducationRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('createEducation', e);
       return null;
     }
-    if (!data) return null;
-    return mapEducationRow(data as Record<string, unknown>);
   },
 
   async updateEducation(id: string, updates: Partial<Education>): Promise<Education | null> {
     const payload = educationToDbPayload(updates);
     if (Object.keys(payload).length === 0) {
-      const cur = await supabase.from('education').select('*').eq('id', id).maybeSingle();
-      return cur.data ? mapEducationRow(cur.data as Record<string, unknown>) : null;
+      try {
+        const cur = await adminOp('education.get', { id }, (raw) => raw as Record<string, unknown> | null);
+        return cur ? mapEducationRow(cur) : null;
+      } catch {
+        return null;
+      }
     }
-    const { data, error } = await supabase
-      .from('education')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-    if (error) {
-      logSupabase('updateEducation', error);
+    try {
+      return await adminOp('education.update', { id, payload }, (raw) => {
+        if (!raw) return null;
+        return mapEducationRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('updateEducation', e);
       return null;
     }
-    if (!data) return null;
-    return mapEducationRow(data as Record<string, unknown>);
   },
 
   async deleteEducation(id: string): Promise<boolean> {
-    const { error } = await supabase.from('education').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('education.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // Testimonials
   async getTestimonials(): Promise<Testimonial[]> {
-    const { data, error } = await supabase.from('testimonials').select('*').order('date', { ascending: false });
-    if (error || !data) return [];
-    return data.map((row) => mapTestimonialRow(row as Record<string, unknown>));
+    try {
+      return await adminOp('testimonials.list', {}, (raw) => {
+        const data = raw as Record<string, unknown>[] | null;
+        return (data ?? []).map((row) => mapTestimonialRow(row));
+      });
+    } catch {
+      return [];
+    }
   },
 
   async createTestimonial(testimonial: Omit<Testimonial, 'id'>): Promise<Testimonial | null> {
@@ -1548,13 +1562,15 @@ export const dataService = {
       ...testimonial,
       avatar: normalizeTestimonialAvatarUrl(testimonial.avatar),
     });
-    const { data, error } = await supabase.from('testimonials').insert(payload).select().maybeSingle();
-    if (error) {
-      logSupabase('createTestimonial', error);
+    try {
+      return await adminOp('testimonials.create', { payload }, (raw) => {
+        if (!raw) return null;
+        return mapTestimonialRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('createTestimonial', e);
       return null;
     }
-    if (!data) return null;
-    return mapTestimonialRow(data as Record<string, unknown>);
   },
 
   async updateTestimonial(id: string, updates: Partial<Testimonial>): Promise<Testimonial | null> {
@@ -1563,146 +1579,187 @@ export const dataService = {
       payload.avatar = normalizeTestimonialAvatarUrl(updates.avatar);
     }
     if (Object.keys(payload).length === 0) {
-      const cur = await supabase.from('testimonials').select('*').eq('id', id).maybeSingle();
-      return cur.data ? mapTestimonialRow(cur.data as Record<string, unknown>) : null;
+      try {
+        const cur = await adminOp('testimonials.get', { id }, (raw) => raw as Record<string, unknown> | null);
+        return cur ? mapTestimonialRow(cur) : null;
+      } catch {
+        return null;
+      }
     }
-    const { data, error } = await supabase.from('testimonials').update(payload).eq('id', id).select().maybeSingle();
-    if (error) {
-      logSupabase('updateTestimonial', error);
+    try {
+      return await adminOp('testimonials.update', { id, payload }, (raw) => {
+        if (!raw) return null;
+        return mapTestimonialRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('updateTestimonial', e);
       return null;
     }
-    if (!data) return null;
-    return mapTestimonialRow(data as Record<string, unknown>);
   },
 
   async deleteTestimonial(id: string): Promise<boolean> {
-    const { error } = await supabase.from('testimonials').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('testimonials.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // Certifications
   async getCertifications(): Promise<Certification[]> {
-    const { data, error } = await supabase.from('certifications').select('*').order('date', { ascending: false });
-    return error || !data
-      ? []
-      : data.map((row) => mapCertificationRow(row as Record<string, unknown>));
+    try {
+      return await adminOp('certifications.list', {}, (raw) => {
+        const data = raw as Record<string, unknown>[] | null;
+        return (data ?? []).map((row) => mapCertificationRow(row));
+      });
+    } catch {
+      return [];
+    }
   },
 
   async createCertification(cert: Omit<Certification, 'id'>): Promise<Certification | null> {
-    const { data, error } = await supabase
-      .from('certifications')
-      .insert(certificationToDbPayload(cert))
-      .select()
-      .maybeSingle();
-    if (error) {
-      logSupabase('createCertification', error);
+    try {
+      const payload = certificationToDbPayload(cert);
+      return await adminOp('certifications.create', { payload }, (raw) => {
+        if (!raw) return null;
+        return mapCertificationRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('createCertification', e);
       return null;
     }
-    if (!data) return null;
-    return mapCertificationRow(data as Record<string, unknown>);
   },
 
   async updateCertification(id: string, updates: Partial<Certification>): Promise<Certification | null> {
     const payload = certificationToDbPayload(updates);
     if (Object.keys(payload).length === 0) {
-      const cur = await supabase.from('certifications').select('*').eq('id', id).maybeSingle();
-      return cur.data ? mapCertificationRow(cur.data as Record<string, unknown>) : null;
+      try {
+        const cur = await adminOp('certifications.get', { id }, (raw) => raw as Record<string, unknown> | null);
+        return cur ? mapCertificationRow(cur) : null;
+      } catch {
+        return null;
+      }
     }
-    const { data, error } = await supabase
-      .from('certifications')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-    if (error) {
-      logSupabase('updateCertification', error);
+    try {
+      return await adminOp('certifications.update', { id, payload }, (raw) => {
+        if (!raw) return null;
+        return mapCertificationRow(raw as Record<string, unknown>);
+      });
+    } catch (e) {
+      logSupabase('updateCertification', e);
       return null;
     }
-    if (!data) return null;
-    return mapCertificationRow(data as Record<string, unknown>);
   },
 
   async deleteCertification(id: string): Promise<boolean> {
-    const { error } = await supabase.from('certifications').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('certifications.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // Contact messages
   async getContactMessages(): Promise<ContactMessage[]> {
-    const { data, error } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
-    if (error) return [];
-    return (data || []).map((m) => mapContactRow(m as Record<string, unknown>));
+    try {
+      return await adminOp('contact_messages.list', {}, (raw) => {
+        const data = raw as Record<string, unknown>[] | null;
+        return (data ?? []).map((m) => mapContactRow(m));
+      });
+    } catch {
+      return [];
+    }
   },
 
   async updateContactMessage(id: string, updates: Partial<ContactMessage>): Promise<ContactMessage | null> {
     const payload: Record<string, unknown> = {};
     if (updates.status !== undefined) payload.status = updates.status;
-    const { data, error } = await supabase.from('contact_messages').update(payload).eq('id', id).select().maybeSingle();
-    if (error) return null;
-    return mapContactRow(data as Record<string, unknown>);
+    try {
+      return await adminOp('contact_messages.update', { id, payload }, (raw) => {
+        if (!raw) return null;
+        return mapContactRow(raw as Record<string, unknown>);
+      });
+    } catch {
+      return null;
+    }
   },
 
   async deleteContactMessage(id: string): Promise<boolean> {
-    const { error } = await supabase.from('contact_messages').delete().eq('id', id);
-    return !error;
+    try {
+      return await adminOp('contact_messages.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   // CV
   async getCVInfo(): Promise<CVInfo | null> {
-    const { data, error } = await supabase.from('cv_info').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (error) return null;
-    return {
-      fileName: data.file_name,
-      uploadDate: data.upload_date,
-      fileSize: data.file_size,
-      url: data.url
-    };
+    try {
+      const data = await adminOp('cv_info.get', {}, (raw) => raw as Record<string, unknown> | null);
+      if (!data) return null;
+      return {
+        fileName: data.file_name as string,
+        uploadDate: data.upload_date as string,
+        fileSize: data.file_size as string,
+        url: data.url != null ? String(data.url) : undefined,
+      };
+    } catch {
+      return null;
+    }
   },
 
   async updateCV(newCVInfo: CVInfo): Promise<CVInfo | null> {
-    const { data, error } = await supabase.from('cv_info').upsert({
-      file_name: newCVInfo.fileName,
-      upload_date: newCVInfo.uploadDate,
-      file_size: newCVInfo.fileSize,
-      url: newCVInfo.url
-    }).select().maybeSingle();
-    if (error) return null;
-    return {
-      fileName: data.file_name,
-      uploadDate: data.upload_date,
-      fileSize: data.file_size,
-      url: data.url
-    };
+    try {
+      const payload = {
+        file_name: newCVInfo.fileName,
+        upload_date: newCVInfo.uploadDate,
+        file_size: newCVInfo.fileSize,
+        url: newCVInfo.url,
+      };
+      const data = await adminOp('cv_info.upsert', { payload }, (raw) => raw as Record<string, unknown> | null);
+      if (!data) return null;
+      return {
+        fileName: data.file_name as string,
+        uploadDate: data.upload_date as string,
+        fileSize: data.file_size as string,
+        url: data.url != null ? String(data.url) : undefined,
+      };
+    } catch {
+      return null;
+    }
   },
 
   async deleteCV(): Promise<boolean> {
-    const { error } = await supabase.from('cv_info').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    return !error;
+    try {
+      return await adminOp('cv_info.delete_all', {}, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
   },
 
   /** Préférences console persistées (Supabase). */
   async getConsoleSettings(): Promise<AdminPreferencesV1 | null> {
-    const { data, error } = await supabase
-      .from('admin_console_settings')
-      .select('*')
-      .eq('id', ADMIN_CONSOLE_SETTINGS_ID)
-      .maybeSingle();
-    if (error || !data) return null;
-    const row = data as Record<string, unknown>;
-    const extra = parsePreferencesExtra(row.preferences_extra);
-    return normalizeAdminPreferences({
-      v: 1,
-      brand: {
-        line1: String(row.sidebar_line1 ?? 'Console').slice(0, 28),
-        line2: String(row.sidebar_line2 ?? 'Portfolio').slice(0, 36),
-        logoUrl: String(row.sidebar_logo_url ?? '').trim().slice(0, 2048),
-      },
-      sidebarCompact: Boolean(row.sidebar_compact),
-      reduceMotion: Boolean(row.reduce_motion),
-      landingPath: String(row.landing_path ?? '/admin/dashboard'),
-      publicSiteUrl: String(row.public_site_url ?? '').slice(0, 512),
-      ...extra,
-    });
+    try {
+      const data = await adminOp('admin_console_settings.get', {}, (raw) => raw as Record<string, unknown> | null);
+      if (!data) return null;
+      const row = data;
+      const extra = parsePreferencesExtra(row.preferences_extra);
+      return normalizeAdminPreferences({
+        v: 1,
+        brand: {
+          line1: String(row.sidebar_line1 ?? 'Console').slice(0, 28),
+          line2: String(row.sidebar_line2 ?? 'Portfolio').slice(0, 36),
+          logoUrl: String(row.sidebar_logo_url ?? '').trim().slice(0, 2048),
+        },
+        sidebarCompact: Boolean(row.sidebar_compact),
+        reduceMotion: Boolean(row.reduce_motion),
+        landingPath: String(row.landing_path ?? '/admin/dashboard'),
+        publicSiteUrl: String(row.public_site_url ?? '').slice(0, 512),
+        ...extra,
+      });
+    } catch {
+      return null;
+    }
   },
 
   async upsertConsoleSettings(prefs: AdminPreferencesV1): Promise<boolean> {
@@ -1718,192 +1775,18 @@ export const dataService = {
       preferences_extra: preferencesExtraFromPrefs(prefs),
       updated_at: new Date().toISOString(),
     };
-    const { error } = await supabase.from('admin_console_settings').upsert(row);
-    if (error) {
-      console.error('upsertConsoleSettings:', error);
+    try {
+      return await adminOp('admin_console_settings.upsert', { payload: row }, (raw) =>
+        Boolean(raw)
+      );
+    } catch (e) {
+      console.error('upsertConsoleSettings:', e);
       return false;
     }
-    return true;
   },
 
   // Dashboard & Analytics
   async getDashboardStats(): Promise<DashboardStats> {
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoIso = weekAgo.toISOString();
-
-    const [
-      viewsTotalRes,
-      viewsWeekRes,
-      visitorsAllRes,
-      visitorsWeekRes,
-      downloadsTotalRes,
-      downloadsWeekRes,
-    ] = await Promise.all([
-      supabase.from('page_views').select('*', { count: 'exact', head: true }),
-      supabase
-        .from('page_views')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', weekAgoIso),
-      supabase.from('page_views').select('ip_hash'),
-      supabase.from('page_views').select('ip_hash').gte('created_at', weekAgoIso),
-      supabase.from('cv_downloads').select('*', { count: 'exact', head: true }),
-      supabase
-        .from('cv_downloads')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', weekAgoIso),
-    ]);
-
-    const uniq = (rows: { ip_hash: string | null }[] | null | undefined) => {
-      const s = new Set<string>();
-      for (const v of rows || []) {
-        if (v.ip_hash != null && v.ip_hash !== '') s.add(v.ip_hash);
-      }
-      return s.size;
-    };
-
-    return {
-      totalViews: viewsTotalRes.count ?? 0,
-      viewsThisWeek: viewsWeekRes.count ?? 0,
-      uniqueVisitors: uniq(visitorsAllRes.data as { ip_hash: string | null }[]),
-      uniqueVisitorsThisWeek: uniq(visitorsWeekRes.data as { ip_hash: string | null }[]),
-      cvDownloads: downloadsTotalRes.count ?? 0,
-      cvDownloadsThisWeek: downloadsWeekRes.count ?? 0,
-      recentActivity: await this.getRecentActivity(),
-    };
+    return adminOp('dashboard.stats', {}, (raw) => raw as DashboardStats);
   },
-
-  async getRecentActivity(): Promise<ActivityEntry[]> {
-    const activity: ActivityEntry[] = [];
-
-    const [
-      { data: latestProject },
-      { data: latestSkill },
-      { data: latestMsg },
-      { data: latestExp },
-      { data: latestEdu },
-      { data: latestTesti },
-      { data: latestService },
-    ] = await Promise.all([
-      supabase
-        .from('projects')
-        .select('id, title, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('skills')
-        .select('id, name, created_at, updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('contact_messages')
-        .select('id, subject, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('experiences')
-        .select('id, company, position, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('education')
-        .select('id, institution, degree, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('testimonials')
-        .select('id, name, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('services')
-        .select('id, title, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
-
-    if (latestProject?.created_at) {
-      const lp = latestProject as Record<string, unknown>;
-      activity.push({
-        id: latestProject.id,
-        type: 'project',
-        subtitle: dashActivityText(lp.title_i18n, lp.title as string | null),
-        date: latestProject.created_at,
-      });
-    }
-
-    if (latestSkill) {
-      const d = latestSkill.updated_at || latestSkill.created_at;
-      if (d) {
-        const ls = latestSkill as Record<string, unknown>;
-        activity.push({
-          id: latestSkill.id,
-          type: 'skill',
-          subtitle: dashActivityText(ls.name_i18n, ls.name as string | null),
-          date: d,
-        });
-      }
-    }
-
-    if (latestMsg?.created_at) {
-      activity.push({
-        id: latestMsg.id,
-        type: 'message',
-        subtitle: latestMsg.subject?.trim() || '',
-        date: latestMsg.created_at,
-      });
-    }
-
-    if (latestExp?.created_at) {
-      const le = latestExp as Record<string, unknown>;
-      activity.push({
-        id: latestExp.id,
-        type: 'experience',
-        subtitle: `${dashActivityText(le.position_i18n, le.position as string | null)} — ${dashActivityText(le.company_i18n, le.company as string | null)}`,
-        date: latestExp.created_at,
-      });
-    }
-
-    if (latestEdu?.created_at) {
-      const ldu = latestEdu as Record<string, unknown>;
-      activity.push({
-        id: latestEdu.id,
-        type: 'education',
-        subtitle: `${dashActivityText(ldu.degree_i18n, ldu.degree as string | null)} — ${dashActivityText(ldu.institution_i18n, ldu.institution as string | null)}`,
-        date: latestEdu.created_at,
-      });
-    }
-
-    if (latestTesti?.created_at) {
-      const lt = latestTesti as Record<string, unknown>;
-      activity.push({
-        id: latestTesti.id,
-        type: 'testimonial',
-        subtitle: dashActivityText(lt.name_i18n, lt.name as string | null),
-        date: latestTesti.created_at,
-      });
-    }
-
-    if (latestService?.created_at) {
-      const lsv = latestService as Record<string, unknown>;
-      activity.push({
-        id: latestService.id,
-        type: 'service',
-        subtitle: dashActivityText(lsv.title_i18n, lsv.title as string | null),
-        date: latestService.created_at,
-      });
-    }
-
-    return activity
-      .filter((a) => a.date && !Number.isNaN(new Date(a.date).getTime()))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 8);
-  }
 };
