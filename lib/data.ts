@@ -46,6 +46,7 @@ function preferencesExtraFromPrefs(prefs: AdminPreferencesV1): Record<string, un
     dashboardDateStyle: prefs.dashboardDateStyle,
     dashboardAutoRefresh: prefs.dashboardAutoRefresh,
     locale: prefs.locale,
+    notifications: prefs.notifications,
   };
 }
 
@@ -63,6 +64,11 @@ function parsePreferencesExtra(raw: unknown): Partial<AdminPreferencesV1> {
   if (typeof e.dashboardAutoRefresh === 'boolean')
     out.dashboardAutoRefresh = e.dashboardAutoRefresh;
   if (e.locale === 'fr' || e.locale === 'en') out.locale = e.locale;
+  if (e.notifications != null) {
+    out.notifications = normalizeNotificationPrefs(
+      e.notifications as Parameters<typeof normalizeNotificationPrefs>[0]
+    );
+  }
   return out;
 }
 
@@ -326,6 +332,10 @@ export interface Testimonial {
   avatar: string;
   rating?: number;
   date?: string;
+  published?: boolean;
+  sortOrder?: number;
+  source?: 'admin' | 'vitrine';
+  submitterEmail?: string;
 }
 
 /**
@@ -344,6 +354,40 @@ export function normalizeTestimonialAvatarUrl(avatar: string | null | undefined)
     return t;
   }
   return '';
+}
+
+export interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  locale: 'fr' | 'en';
+  status: 'active' | 'unsubscribed';
+  source: string;
+  consent: boolean;
+  subscribedAt: string;
+  unsubscribedAt?: string;
+  createdAt: string;
+}
+
+function mapNewsletterRow(row: Record<string, unknown>): NewsletterSubscriber {
+  const st = row.status;
+  const status: NewsletterSubscriber['status'] =
+    st === 'unsubscribed' ? 'unsubscribed' : 'active';
+  const loc = row.locale;
+  const locale: NewsletterSubscriber['locale'] = loc === 'en' ? 'en' : 'fr';
+  return {
+    id: String(row.id ?? ''),
+    email: String(row.email ?? ''),
+    locale,
+    status,
+    source: String(row.source ?? 'footer'),
+    consent: Boolean(row.consent),
+    subscribedAt: String(row.subscribed_at ?? row.created_at ?? ''),
+    unsubscribedAt:
+      row.unsubscribed_at != null && row.unsubscribed_at !== ''
+        ? String(row.unsubscribed_at)
+        : undefined,
+    createdAt: String(row.created_at ?? ''),
+  };
 }
 
 export interface ContactMessage {
@@ -442,6 +486,17 @@ function mapTestimonialRow(row: Record<string, unknown>): Testimonial {
     rating:
       typeof row.rating === 'number' ? row.rating : undefined,
     date: row.date != null ? String(row.date) : undefined,
+    published: row.published == null ? true : Boolean(row.published),
+    sortOrder:
+      typeof row.sort_order === 'number'
+        ? row.sort_order
+        : Number(row.sort_order) || 0,
+    source:
+      row.source === 'vitrine' ? 'vitrine' : 'admin',
+    submitterEmail:
+      row.submitter_email != null && String(row.submitter_email).trim() !== ''
+        ? String(row.submitter_email)
+        : undefined,
   };
 }
 
@@ -462,6 +517,10 @@ export function testimonialToDbPayload(t: Partial<Testimonial>): Record<string, 
   if (t.avatar !== undefined) out.avatar = t.avatar;
   if (t.rating !== undefined) out.rating = t.rating;
   if (t.date !== undefined) out.date = t.date;
+  if (t.published !== undefined) out.published = t.published;
+  if (t.sortOrder !== undefined) out.sort_order = t.sortOrder;
+  if (t.source !== undefined) out.source = t.source;
+  if (t.submitterEmail !== undefined) out.submitter_email = t.submitterEmail;
   return out;
 }
 
@@ -1605,6 +1664,11 @@ export const dataService = {
     }
   },
 
+  /** Publie un avis soumis depuis la vitrine (published = true). */
+  async approveTestimonial(id: string): Promise<Testimonial | null> {
+    return this.updateTestimonial(id, { published: true });
+  },
+
   // Certifications
   async getCertifications(): Promise<Certification[]> {
     try {
@@ -1687,6 +1751,48 @@ export const dataService = {
   async deleteContactMessage(id: string): Promise<boolean> {
     try {
       return await adminOp('contact_messages.delete', { id }, (raw) => Boolean(raw));
+    } catch {
+      return false;
+    }
+  },
+
+  async getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+    try {
+      return await adminOp('newsletter_subscribers.list', {}, (raw) => {
+        const data = raw as Record<string, unknown>[] | null;
+        return (data ?? []).map((m) => mapNewsletterRow(m));
+      });
+    } catch {
+      return [];
+    }
+  },
+
+  async updateNewsletterSubscriber(
+    id: string,
+    updates: Partial<Pick<NewsletterSubscriber, 'status'>>
+  ): Promise<NewsletterSubscriber | null> {
+    const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (updates.status === 'unsubscribed') {
+      payload.status = 'unsubscribed';
+      payload.unsubscribed_at = new Date().toISOString();
+    } else if (updates.status === 'active') {
+      payload.status = 'active';
+      payload.unsubscribed_at = null;
+      payload.subscribed_at = new Date().toISOString();
+    }
+    try {
+      return await adminOp('newsletter_subscribers.update', { id, payload }, (raw) => {
+        if (!raw) return null;
+        return mapNewsletterRow(raw as Record<string, unknown>);
+      });
+    } catch {
+      return null;
+    }
+  },
+
+  async deleteNewsletterSubscriber(id: string): Promise<boolean> {
+    try {
+      return await adminOp('newsletter_subscribers.delete', { id }, (raw) => Boolean(raw));
     } catch {
       return false;
     }

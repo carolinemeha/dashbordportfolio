@@ -103,6 +103,11 @@ CREATE TABLE IF NOT EXISTS testimonials (
   content TEXT,
   avatar TEXT,
   date TEXT,
+  rating INTEGER CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
+  published BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'vitrine')),
+  submitter_email TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -299,4 +304,10 @@ CREATE POLICY portfolio_public_select_skills ON skills FOR SELECT TO anon, authe
 
 DROP POLICY IF EXISTS portfolio_public_select_services ON services;
 CREATE POLICY portfolio_public_select_services ON services FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_testimonials ON testimonials;
+CREATE POLICY portfolio_public_select_testimonials ON testimonials FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_certifications ON certifications;
+CREATE POLICY portfolio_public_select_certifications ON certifications FOR SELECT TO anon, authenticated USING (true);
 

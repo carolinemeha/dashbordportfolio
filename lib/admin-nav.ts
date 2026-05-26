@@ -10,8 +10,12 @@ import {
   GraduationCap,
   MessageSquare,
   Mail,
+  Rss,
   Award,
   SlidersHorizontal,
+  Newspaper,
+  Store,
+  Sparkles,
 } from 'lucide-react';
 
 /** Aligné sur le frontend (next-intl) : `fr` et `en` uniquement. */
@@ -34,6 +38,10 @@ export const ADMIN_NAV_DEFS: AdminNavDef[] = [
   { id: 'education', href: '/admin/education', icon: GraduationCap },
   { id: 'certifications', href: '/admin/certifications', icon: Award },
   { id: 'testimonials', href: '/admin/testimonials', icon: MessageSquare },
+  { id: 'blog', href: '/admin/blog', icon: Newspaper },
+  { id: 'marketplace', href: '/admin/marketplace', icon: Store },
+  { id: 'vitrine', href: '/admin/vitrine', icon: Sparkles },
+  { id: 'newsletter', href: '/admin/newsletter', icon: Rss },
   { id: 'contact', href: '/admin/contact', icon: Mail },
   { id: 'settings', href: '/admin/settings', icon: SlidersHorizontal },
 ];

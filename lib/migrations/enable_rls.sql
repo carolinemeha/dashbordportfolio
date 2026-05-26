@@ -60,3 +60,20 @@ CREATE POLICY portfolio_public_select_skills ON public.skills FOR SELECT TO anon
 
 DROP POLICY IF EXISTS portfolio_public_select_services ON public.services;
 CREATE POLICY portfolio_public_select_services ON public.services FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_testimonials ON public.testimonials;
+CREATE POLICY portfolio_public_select_testimonials ON public.testimonials FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS portfolio_public_select_certifications ON public.certifications;
+CREATE POLICY portfolio_public_select_certifications ON public.certifications FOR SELECT TO anon, authenticated USING (true);
+
+-- Tables SaaS (voir lib/migrations/portfolio_saas_extensions.sql) — RLS activée,
+-- aucune policy anon/authenticated : accès réservé à la service_role via API Next.js.
+ALTER TABLE public.visitor_presence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.project_impressions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tech_impressions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.quote_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.booking_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_onboarding ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.client_projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_chat_sessions ENABLE ROW LEVEL SECURITY;

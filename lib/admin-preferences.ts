@@ -15,6 +15,29 @@ export type AdminBrandPrefs = {
   logoUrl: string;
 };
 
+export type AdminNotificationEventKey =
+  | 'contact'
+  | 'testimonial'
+  | 'quote'
+  | 'booking'
+  | 'newsletter';
+
+export type AdminNotificationChannelPrefs = {
+  email: boolean;
+  push: boolean;
+  realtime: boolean;
+};
+
+export type AdminNotificationPrefs = {
+  /** Interrupteur global e-mail admin (vitrine) */
+  emailEnabled: boolean;
+  /** Interrupteur global push Web */
+  pushEnabled: boolean;
+  /** Insérer dans realtime_notifications (Lab vitrine) */
+  realtimeEnabled: boolean;
+  events: Record<AdminNotificationEventKey, AdminNotificationChannelPrefs>;
+};
+
 export type AdminPreferencesV1 = {
   v: 1;
   brand: AdminBrandPrefs;
@@ -40,6 +63,8 @@ export type AdminPreferencesV1 = {
   dashboardAutoRefresh: boolean;
   /** Langue de l’interface (alignée sur le site : fr | en) */
   locale: AdminLocale;
+  /** Canaux e-mail / push / realtime pour les événements vitrine */
+  notifications: AdminNotificationPrefs;
 };
 
 const brandDefaults: AdminBrandPrefs = {
@@ -47,6 +72,67 @@ const brandDefaults: AdminBrandPrefs = {
   line2: 'Portfolio',
   logoUrl: '',
 };
+
+const NOTIFICATION_EVENT_KEYS: AdminNotificationEventKey[] = [
+  'contact',
+  'testimonial',
+  'quote',
+  'booking',
+  'newsletter',
+];
+
+export function getDefaultNotificationPrefs(): AdminNotificationPrefs {
+  return {
+    emailEnabled: true,
+    pushEnabled: true,
+    realtimeEnabled: true,
+    events: {
+      contact: { email: false, push: true, realtime: true },
+      testimonial: { email: true, push: true, realtime: true },
+      quote: { email: true, push: true, realtime: true },
+      booking: { email: true, push: true, realtime: true },
+      newsletter: { email: true, push: true, realtime: true },
+    },
+  };
+}
+
+function normalizeEventChannel(
+  raw: unknown,
+  fallback: AdminNotificationChannelPrefs
+): AdminNotificationChannelPrefs {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return { ...fallback };
+  const o = raw as Record<string, unknown>;
+  return {
+    email: typeof o.email === 'boolean' ? o.email : fallback.email,
+    push: typeof o.push === 'boolean' ? o.push : fallback.push,
+    realtime: typeof o.realtime === 'boolean' ? o.realtime : fallback.realtime,
+  };
+}
+
+export function normalizeNotificationPrefs(
+  raw: Partial<AdminNotificationPrefs> | undefined
+): AdminNotificationPrefs {
+  const def = getDefaultNotificationPrefs();
+  const eventsIn =
+    raw?.events && typeof raw.events === 'object' && !Array.isArray(raw.events)
+      ? (raw.events as Record<string, unknown>)
+      : {};
+  const events = { ...def.events };
+  for (const key of NOTIFICATION_EVENT_KEYS) {
+    events[key] = normalizeEventChannel(eventsIn[key], def.events[key]);
+  }
+  return {
+    emailEnabled:
+      typeof raw?.emailEnabled === 'boolean' ? raw.emailEnabled : def.emailEnabled,
+    pushEnabled:
+      typeof raw?.pushEnabled === 'boolean' ? raw.pushEnabled : def.pushEnabled,
+    realtimeEnabled:
+      typeof raw?.realtimeEnabled === 'boolean'
+        ? raw.realtimeEnabled
+        : def.realtimeEnabled,
+    events,
+  };
+}
 
 function normalizeLogoUrl(raw: unknown): string {
   if (typeof raw !== 'string') return '';
@@ -94,6 +180,7 @@ export function getDefaultPreferences(): AdminPreferencesV1 {
     dashboardDateStyle: 'relative',
     dashboardAutoRefresh: false,
     locale: 'fr',
+    notifications: getDefaultNotificationPrefs(),
   };
 }
 
@@ -133,6 +220,7 @@ function normalizePrefs(p: Partial<AdminPreferencesV1>): AdminPreferencesV1 {
       p.dashboardDateStyle === 'absolute' ? 'absolute' : 'relative',
     dashboardAutoRefresh: Boolean(p.dashboardAutoRefresh),
     locale: isAdminLocale(p.locale) ? p.locale : def.locale,
+    notifications: normalizeNotificationPrefs(p.notifications),
   };
 }
 

@@ -72,6 +72,26 @@
       "heading": "Témoignages clients",
       "description": "Avis, citations et recommandations affichés sur le portfolio."
     },
+    "blog": {
+      "name": "Blog",
+      "heading": "Articles blog",
+      "description": "Articles publiés sur /blog (vitrine)."
+    },
+    "marketplace": {
+      "name": "Marketplace",
+      "heading": "Catalogue marketplace",
+      "description": "Kits, templates et composants sur /marketplace."
+    },
+    "vitrine": {
+      "name": "Vitrine+",
+      "heading": "Contenu vitrine avancé",
+      "description": "Notifications live, changelog, roadmap et disponibilité."
+    },
+    "newsletter": {
+      "name": "Newsletter",
+      "heading": "Abonnés newsletter",
+      "description": "Inscriptions depuis le footer vitrine, export CSV et désinscriptions."
+    },
     "contact": {
       "name": "Messages",
       "heading": "Formulaire contact",
@@ -242,6 +262,46 @@
       "ok": "Connexion Supabase opérationnelle.",
       "done": "Diagnostic terminé — voir le détail ci-dessous.",
       "error": "Impossible de contacter le serveur de diagnostic."
+    },
+    "notifications": {
+      "title": "Notifications (e-mail & push)",
+      "description": "Canaux alertés lors des événements sur la vitrine (contact, avis, devis, réservation). Les réglages sont synchronisés dans Supabase et lus par le serveur vitrine.",
+      "globalTitle": "Canaux globaux",
+      "emailGlobal": "E-mails admin",
+      "emailGlobalDesc": "Alertes HTML vers MAIL_TO_ADMIN (envoi côté vitrine Myporfolio).",
+      "pushGlobal": "Push Web",
+      "pushGlobalDesc": "Notification navigateur via VAPID et table push_subscriptions.",
+      "realtimeGlobal": "Fil temps réel",
+      "realtimeGlobalDesc": "Entrées dans realtime_notifications (Lab / vitrine).",
+      "eventsTitle": "Par type d'événement",
+      "colEvent": "Événement",
+      "colEmail": "E-mail",
+      "colPush": "Push",
+      "colRealtime": "Realtime",
+      "event": {
+        "contact": "Message contact",
+        "testimonial": "Avis client",
+        "quote": "Demande de devis",
+        "booking": "Réservation",
+        "newsletter": "Newsletter"
+      },
+      "contactNote": "Le formulaire contact envoie déjà un e-mail dédié ; la colonne e-mail évite un doublon (désactivée par défaut).",
+      "browserTitle": "Ce navigateur",
+      "browserDesc": "Abonnez cette session pour recevoir les push sur cet ordinateur (clés VAPID identiques à la vitrine).",
+      "enablePush": "Activer les notifications push",
+      "pushEnabled": "Abonnement push enregistré.",
+      "pushFailed": "Enregistrement impossible (vérifiez Supabase).",
+      "pushError": "Erreur lors de l'activation.",
+      "unsupported": "Notifications non supportées sur ce navigateur.",
+      "denied": "Permission refusée.",
+      "deniedHint": "Autorisez les notifications dans les paramètres du navigateur.",
+      "testTitle": "Portfolio Admin",
+      "testBody": "Les notifications push sont actives sur cet appareil.",
+      "saved": "Préférences notifications enregistrées.",
+      "mailOk": "E-mail configuré (vitrine)",
+      "mailMissing": "E-mail non configuré (MAIL_TO_ADMIN)",
+      "vapidOk": "VAPID public OK",
+      "vapidMissing": "NEXT_PUBLIC_VAPID_PUBLIC_KEY manquant"
     },
     "publicSite": {
       "title": "Site public",

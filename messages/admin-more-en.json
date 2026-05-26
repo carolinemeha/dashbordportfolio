@@ -7,7 +7,8 @@
     "deleteExperience": "Delete this experience?",
     "deleteEducation": "Delete this education entry?",
     "deleteCertification": "Delete this certification?",
-    "deleteTestimonial": "Delete this testimonial?"
+    "deleteTestimonial": "Delete this testimonial?",
+    "deleteSubscriber": "Permanently delete this subscriber?"
   },
   "landing": {
     "badge": "Admin Dashboard 2.0",
@@ -82,6 +83,32 @@
         "design": "Visuals",
         "logo": "Logo"
       }
+    },
+    "newsletter": {
+      "total": "Total: {count}",
+      "active": "Active: {count}",
+      "filterAll": "All",
+      "filterActive": "Active",
+      "filterUnsub": "Unsubscribed",
+      "exportCsv": "Export CSV (active)",
+      "exportEmpty": "No active subscribers to export.",
+      "exportDone": "CSV export downloaded.",
+      "emptyTitle": "No subscribers",
+      "emptyDesc": "Sign-ups from the site footer will appear here after SQL migration 013.",
+      "listTitle": "Subscriber list",
+      "colEmail": "Email",
+      "colStatus": "Status",
+      "colSource": "Source",
+      "colLocale": "Locale",
+      "colDate": "Subscribed",
+      "colActions": "Actions",
+      "statusActive": "Active",
+      "statusUnsub": "Unsubscribed",
+      "unsubAction": "Unsubscribe",
+      "reactivateAction": "Reactivate",
+      "deleted": "Subscriber deleted.",
+      "unsubscribed": "Subscriber unsubscribed.",
+      "reactivated": "Subscriber reactivated."
     },
     "contact": {
       "emptyTitle": "Inbox is empty",
@@ -171,7 +198,15 @@
       "new": "New testimonial",
       "emptyTitle": "No testimonials",
       "emptyDesc": "Add testimonials to strengthen your credibility.",
-      "add": "Add testimonial"
+      "add": "Add testimonial",
+      "pendingTitle": "Pending reviews (site)",
+      "pendingDesc": "Submissions from the public portfolio — publish or delete after review.",
+      "pendingBadge": "Pending",
+      "fromVitrine": "Site",
+      "publishedTitle": "Published on site",
+      "approve": "Publish",
+      "approveSuccess": "Review published on the portfolio.",
+      "approveError": "Could not publish this review."
     }
   },
   "forms": {
@@ -391,6 +426,10 @@
       "contentPh": "Que disent-ils de vous ?",
       "contentPhEn": "What they say about you…",
       "rating": "Rating (optional)",
+      "published": "Visible on public site",
+      "publishedHint": "Off = hidden from the portfolio.",
+      "sortOrder": "Display order",
+      "sortOrderHint": "Higher values appear first.",
       "add": "Add testimonial"
     },
     "service": {

@@ -7,7 +7,8 @@
     "deleteExperience": "Supprimer cette expérience ?",
     "deleteEducation": "Supprimer cette formation ?",
     "deleteCertification": "Supprimer cette certification ?",
-    "deleteTestimonial": "Supprimer ce témoignage ?"
+    "deleteTestimonial": "Supprimer ce témoignage ?",
+    "deleteSubscriber": "Supprimer cet abonné définitivement ?"
   },
   "landing": {
     "badge": "Admin Dashboard 2.0",
@@ -82,6 +83,32 @@
         "design": "Visuels",
         "logo": "Logo"
       }
+    },
+    "newsletter": {
+      "total": "Total : {count}",
+      "active": "Actifs : {count}",
+      "filterAll": "Tous",
+      "filterActive": "Actifs",
+      "filterUnsub": "Désinscrits",
+      "exportCsv": "Exporter CSV (actifs)",
+      "exportEmpty": "Aucun abonné actif à exporter.",
+      "exportDone": "Export CSV téléchargé.",
+      "emptyTitle": "Aucun abonné",
+      "emptyDesc": "Les inscriptions depuis le footer du site apparaîtront ici après la migration SQL 013.",
+      "listTitle": "Liste des abonnés",
+      "colEmail": "E-mail",
+      "colStatus": "Statut",
+      "colSource": "Source",
+      "colLocale": "Langue",
+      "colDate": "Inscription",
+      "colActions": "Actions",
+      "statusActive": "Actif",
+      "statusUnsub": "Désinscrit",
+      "unsubAction": "Désinscrire",
+      "reactivateAction": "Réactiver",
+      "deleted": "Abonné supprimé.",
+      "unsubscribed": "Abonné désinscrit.",
+      "reactivated": "Abonné réactivé."
     },
     "contact": {
       "emptyTitle": "Boîte de réception vide",
@@ -171,7 +198,15 @@
       "new": "Nouveau témoignage",
       "emptyTitle": "Aucun témoignage",
       "emptyDesc": "Ajoutez des témoignages pour renforcer votre crédibilité.",
-      "add": "Ajouter un témoignage"
+      "add": "Ajouter un témoignage",
+      "pendingTitle": "Avis en attente (vitrine)",
+      "pendingDesc": "Soumissions depuis le site public — publiez ou supprimez après relecture.",
+      "pendingBadge": "En attente",
+      "fromVitrine": "Vitrine",
+      "publishedTitle": "Publiés sur le site",
+      "approve": "Publier",
+      "approveSuccess": "Avis publié sur la vitrine.",
+      "approveError": "Impossible de publier cet avis."
     }
   },
   "forms": {
@@ -391,6 +426,10 @@
       "contentPh": "Que disent-ils de vous ?",
       "contentPhEn": "What they say about you…",
       "rating": "Note (optionnel)",
+      "published": "Visible sur la vitrine",
+      "publishedHint": "Désactivé = masqué sur le site public.",
+      "sortOrder": "Ordre d'affichage",
+      "sortOrderHint": "Plus le nombre est élevé, plus le témoignage remonte.",
       "add": "Ajouter le témoignage"
     },
     "service": {

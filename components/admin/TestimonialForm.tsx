@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +48,8 @@ export default function TestimonialForm({
     rating: 5,
     avatar: '',
     date: defaultDate(),
+    published: true,
+    sortOrder: 0,
   });
 
   useEffect(() => {
@@ -57,6 +61,8 @@ export default function TestimonialForm({
         rating: testimonial.rating ?? 5,
         avatar: testimonial.avatar,
         date: testimonialDateToInput(testimonial.date),
+        published: testimonial.published !== false,
+        sortOrder: testimonial.sortOrder ?? 0,
       });
     } else {
       setFormData({
@@ -66,6 +72,8 @@ export default function TestimonialForm({
         rating: 5,
         avatar: '',
         date: defaultDate(),
+        published: true,
+        sortOrder: 0,
       });
     }
   }, [testimonial]);
@@ -169,6 +177,41 @@ export default function TestimonialForm({
               placeholderFr={t('forms.testimonial.contentPh')}
               placeholderEn={t('forms.testimonial.contentPhEn')}
             />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="testi-sort" className="text-foreground">
+                  {t('forms.testimonial.sortOrder')}
+                </Label>
+                <Input
+                  id="testi-sort"
+                  type="number"
+                  min={0}
+                  max={9999}
+                  value={formData.sortOrder ?? 0}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      sortOrder: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">{t('forms.testimonial.sortOrderHint')}</p>
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-border/50 bg-secondary/20 px-4 py-3">
+                <div>
+                  <Label htmlFor="testi-published" className="text-foreground">
+                    {t('forms.testimonial.published')}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">{t('forms.testimonial.publishedHint')}</p>
+                </div>
+                <Switch
+                  id="testi-published"
+                  checked={formData.published !== false}
+                  onCheckedChange={(published) => setFormData({ ...formData, published })}
+                />
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="rating" className="text-foreground flex items-center gap-2 mb-2">

@@ -72,6 +72,26 @@
       "heading": "Client testimonials",
       "description": "Quotes and recommendations shown on the portfolio."
     },
+    "blog": {
+      "name": "Blog",
+      "heading": "Blog posts",
+      "description": "Published articles on /blog (public site)."
+    },
+    "marketplace": {
+      "name": "Marketplace",
+      "heading": "Marketplace catalog",
+      "description": "Kits, templates and components on /marketplace."
+    },
+    "vitrine": {
+      "name": "Site+",
+      "heading": "Advanced public content",
+      "description": "Live notifications, changelog, roadmap and availability."
+    },
+    "newsletter": {
+      "name": "Newsletter",
+      "heading": "Newsletter subscribers",
+      "description": "Sign-ups from the showcase footer, CSV export and unsubscribes."
+    },
     "contact": {
       "name": "Messages",
       "heading": "Contact form",
@@ -242,6 +262,46 @@
       "ok": "Supabase connection OK.",
       "done": "Diagnostics complete — see details below.",
       "error": "Could not reach the diagnostics endpoint."
+    },
+    "notifications": {
+      "title": "Notifications (email & push)",
+      "description": "Channels alerted when events occur on the showcase (contact, reviews, quotes, bookings). Settings sync to Supabase and are read by the showcase server.",
+      "globalTitle": "Global channels",
+      "emailGlobal": "Admin emails",
+      "emailGlobalDesc": "HTML alerts to MAIL_TO_ADMIN (sent from the Myporfolio server).",
+      "pushGlobal": "Web Push",
+      "pushGlobalDesc": "Browser notifications via VAPID and push_subscriptions.",
+      "realtimeGlobal": "Realtime feed",
+      "realtimeGlobalDesc": "Entries in realtime_notifications (Lab / showcase).",
+      "eventsTitle": "Per event type",
+      "colEvent": "Event",
+      "colEmail": "Email",
+      "colPush": "Push",
+      "colRealtime": "Realtime",
+      "event": {
+        "contact": "Contact message",
+        "testimonial": "Client review",
+        "quote": "Quote request",
+        "booking": "Booking",
+        "newsletter": "Newsletter"
+      },
+      "contactNote": "The contact form already sends a dedicated email; the email column avoids duplicates (off by default).",
+      "browserTitle": "This browser",
+      "browserDesc": "Subscribe this session to receive push on this device (same VAPID keys as the showcase).",
+      "enablePush": "Enable push notifications",
+      "pushEnabled": "Push subscription saved.",
+      "pushFailed": "Could not save subscription (check Supabase).",
+      "pushError": "Could not enable notifications.",
+      "unsupported": "Notifications are not supported in this browser.",
+      "denied": "Permission denied.",
+      "deniedHint": "Allow notifications in your browser settings.",
+      "testTitle": "Portfolio Admin",
+      "testBody": "Push notifications are active on this device.",
+      "saved": "Notification preferences saved.",
+      "mailOk": "Email configured (showcase)",
+      "mailMissing": "Email not configured (MAIL_TO_ADMIN)",
+      "vapidOk": "Public VAPID OK",
+      "vapidMissing": "Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY"
     },
     "publicSite": {
       "title": "Public site",

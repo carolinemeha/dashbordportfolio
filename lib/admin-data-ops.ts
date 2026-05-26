@@ -282,7 +282,9 @@ export async function runAdminDataOp(
       const { data, error } = await client
         .from('testimonials')
         .select('*')
-        .order('date', { ascending: false });
+        .order('sort_order', { ascending: false })
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
     }
@@ -388,6 +390,31 @@ export async function runAdminDataOp(
     case 'contact_messages.delete': {
       const id = String(a.id ?? '');
       const { error } = await client.from('contact_messages').delete().eq('id', id);
+      return !error;
+    }
+
+    case 'newsletter_subscribers.list': {
+      const { data, error } = await client
+        .from('newsletter_subscribers')
+        .select('*')
+        .order('subscribed_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    }
+    case 'newsletter_subscribers.update': {
+      const id = String(a.id ?? '');
+      const { data, error } = await client
+        .from('newsletter_subscribers')
+        .update(a.payload as Record<string, unknown>)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'newsletter_subscribers.delete': {
+      const id = String(a.id ?? '');
+      const { error } = await client.from('newsletter_subscribers').delete().eq('id', id);
       return !error;
     }
 
@@ -613,6 +640,162 @@ export async function runAdminDataOp(
         cvDownloadsThisWeek: downloadsWeekRes.count ?? 0,
         recentActivity,
       };
+    }
+
+    case 'blog_posts.list': {
+      const { data, error } = await client
+        .from('blog_posts')
+        .select('*')
+        .order('published_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    }
+    case 'blog_posts.create': {
+      const { data, error } = await client
+        .from('blog_posts')
+        .insert(a.payload as Record<string, unknown>)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'blog_posts.update': {
+      const id = String(a.id ?? '');
+      const { data, error } = await client
+        .from('blog_posts')
+        .update(a.payload as Record<string, unknown>)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'blog_posts.delete': {
+      const id = String(a.id ?? '');
+      const { error } = await client.from('blog_posts').delete().eq('id', id);
+      return !error;
+    }
+
+    case 'marketplace_products.list': {
+      const { data, error } = await client
+        .from('marketplace_products')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    }
+    case 'marketplace_products.create': {
+      const { data, error } = await client
+        .from('marketplace_products')
+        .insert(a.payload as Record<string, unknown>)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'marketplace_products.update': {
+      const id = String(a.id ?? '');
+      const { data, error } = await client
+        .from('marketplace_products')
+        .update(a.payload as Record<string, unknown>)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'marketplace_products.delete': {
+      const id = String(a.id ?? '');
+      const { error } = await client.from('marketplace_products').delete().eq('id', id);
+      return !error;
+    }
+
+    case 'realtime_notifications.list': {
+      const { data, error } = await client
+        .from('realtime_notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    }
+    case 'realtime_notifications.create': {
+      const { data, error } = await client
+        .from('realtime_notifications')
+        .insert(a.payload as Record<string, unknown>)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'realtime_notifications.delete': {
+      const id = String(a.id ?? '');
+      const { error } = await client
+        .from('realtime_notifications')
+        .delete()
+        .eq('id', id);
+      return !error;
+    }
+
+    case 'platform_changelog.list': {
+      const { data, error } = await client
+        .from('platform_changelog')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    }
+    case 'platform_changelog.create': {
+      const { data, error } = await client
+        .from('platform_changelog')
+        .insert(a.payload as Record<string, unknown>)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'platform_changelog.delete': {
+      const id = String(a.id ?? '');
+      const { error } = await client.from('platform_changelog').delete().eq('id', id);
+      return !error;
+    }
+
+    case 'platform_roadmap.list': {
+      const { data, error } = await client
+        .from('platform_roadmap')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    }
+    case 'platform_roadmap.create': {
+      const { data, error } = await client
+        .from('platform_roadmap')
+        .insert(a.payload as Record<string, unknown>)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'platform_roadmap.delete': {
+      const id = String(a.id ?? '');
+      const { error } = await client.from('platform_roadmap').delete().eq('id', id);
+      return !error;
+    }
+
+    case 'platform_availability.get': {
+      const { data, error } = await client
+        .from('platform_availability')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+    case 'platform_availability.upsert': {
+      const { error } = await client
+        .from('platform_availability')
+        .upsert(a.payload as Record<string, unknown>);
+      return !error;
     }
 
     default:
