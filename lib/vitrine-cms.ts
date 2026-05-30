@@ -1,5 +1,6 @@
 import { adminRpc } from './admin-rpc';
 import { runAdminDataOp } from './admin-data-ops';
+import { normalizeMarketplaceProduct } from './marketplace-product-admin';
 
 const IS_BROWSER = typeof window !== 'undefined';
 
@@ -45,8 +46,11 @@ export type MarketplaceProduct = {
   currency: string;
   previewUrl: string;
   ctaUrl: string;
+  /** Lien ZIP / Drive / repo — admin seulement, non exposé sur la vitrine. */
+  deliveryUrl: string;
   published: boolean;
   sortOrder: number;
+  isFeatured: boolean;
 };
 
 export type VitrineNotification = {
@@ -146,26 +150,53 @@ function mapMarketplaceRow(row: Record<string, unknown>): MarketplaceProduct {
     currency: String(row.currency ?? 'EUR'),
     previewUrl: row.preview_url != null ? String(row.preview_url) : '',
     ctaUrl: row.cta_url != null ? String(row.cta_url) : '',
+    deliveryUrl: row.delivery_url != null ? String(row.delivery_url) : '',
     published: Boolean(row.published ?? true),
     sortOrder: Number(row.sort_order) || 0,
+    isFeatured: Boolean(row.is_featured ?? false),
   };
 }
 
 function marketplaceToPayload(p: Partial<MarketplaceProduct>): Record<string, unknown> {
+  const normalized = normalizeMarketplaceProduct(p);
   const out: Record<string, unknown> = {};
-  if (p.slug !== undefined) out.slug = p.slug.trim();
-  if (p.category !== undefined) out.category = p.category;
-  if (p.titleFr !== undefined) out.title_fr = p.titleFr.trim();
-  if (p.titleEn !== undefined) out.title_en = p.titleEn.trim();
-  if (p.descriptionFr !== undefined) out.description_fr = p.descriptionFr.trim();
-  if (p.descriptionEn !== undefined) out.description_en = p.descriptionEn.trim();
-  if (p.priceCents !== undefined) out.price_cents = p.priceCents;
-  if (p.currency !== undefined) out.currency = p.currency.trim() || 'EUR';
-  if (p.previewUrl !== undefined) out.preview_url = p.previewUrl.trim() || null;
-  if (p.ctaUrl !== undefined) out.cta_url = p.ctaUrl.trim() || null;
-  if (p.published !== undefined) out.published = p.published;
-  if (p.sortOrder !== undefined) out.sort_order = p.sortOrder;
+  if (p.slug !== undefined || p.titleFr !== undefined) out.slug = normalized.slug;
+  if (p.category !== undefined) out.category = normalized.category;
+  if (p.titleFr !== undefined || p.titleEn !== undefined) {
+    out.title_fr = normalized.titleFr;
+    out.title_en = normalized.titleEn;
+  }
+  if (p.descriptionFr !== undefined) out.description_fr = normalized.descriptionFr || null;
+  if (p.descriptionEn !== undefined) out.description_en = normalized.descriptionEn || null;
+  if (p.priceCents !== undefined) out.price_cents = normalized.priceCents;
+  if (p.currency !== undefined) out.currency = normalized.currency;
+  if (p.previewUrl !== undefined) out.preview_url = normalized.previewUrl || null;
+  if (p.ctaUrl !== undefined) out.cta_url = normalized.ctaUrl || null;
+  if (p.deliveryUrl !== undefined) out.delivery_url = normalized.deliveryUrl || null;
+  if (p.published !== undefined) out.published = normalized.published;
+  if (p.sortOrder !== undefined) out.sort_order = normalized.sortOrder;
+  if (p.isFeatured !== undefined) out.is_featured = normalized.isFeatured;
   return out;
+}
+
+function marketplaceCreatePayload(product: Omit<MarketplaceProduct, 'id'>): Record<string, unknown> {
+  const n = normalizeMarketplaceProduct(product);
+  return {
+    slug: n.slug,
+    category: n.category,
+    title_fr: n.titleFr,
+    title_en: n.titleEn,
+    description_fr: n.descriptionFr || null,
+    description_en: n.descriptionEn || null,
+    price_cents: n.priceCents,
+    currency: n.currency,
+    preview_url: n.previewUrl || null,
+    cta_url: n.ctaUrl || null,
+    delivery_url: n.deliveryUrl || null,
+    published: n.published,
+    sort_order: n.sortOrder,
+    is_featured: n.isFeatured,
+  };
 }
 
 function mapNotificationRow(row: Record<string, unknown>): VitrineNotification {
@@ -335,12 +366,12 @@ export const vitrineCmsService = {
     try {
       return await adminOp(
         'marketplace_products.create',
-        { payload: marketplaceToPayload(product) },
+        { payload: marketplaceCreatePayload(product) },
         (raw) => (raw ? mapMarketplaceRow(raw as Record<string, unknown>) : null)
       );
     } catch (e) {
       log('createMarketplaceProduct', e);
-      return null;
+      throw e;
     }
   },
   async updateMarketplaceProduct(
@@ -355,7 +386,7 @@ export const vitrineCmsService = {
       );
     } catch (e) {
       log('updateMarketplaceProduct', e);
-      return null;
+      throw e;
     }
   },
   async deleteMarketplaceProduct(id: string): Promise<boolean> {

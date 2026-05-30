@@ -1,0 +1,2 @@
+-- Copie admin : exécuter sur Supabase (même projet que la vitrine).
+-- Fichier source complet : Myporfolio/supabase/migrations/015_blog_engineering_seed.sql

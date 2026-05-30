@@ -4,39 +4,32 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
+import MarketplaceProductForm, {
+  emptyMarketplaceProduct,
+  type MarketplaceFormState,
+} from '@/components/admin/MarketplaceProductForm';
 import { vitrineCmsService, type MarketplaceProduct } from '@/lib/vitrine-cms';
-import { Plus, Edit, Trash2, Store } from 'lucide-react';
+import { formatPriceFromCents, getCategoryFormConfig } from '@/lib/marketplace-product-admin';
+import { resolveVitrineAssetUrl } from '@/lib/vitrine-url';
+import { Plus, Edit, Trash2, Store, Star, ExternalLink, Copy, PackageCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-const emptyProduct = (): Omit<MarketplaceProduct, 'id'> => ({
-  slug: '',
-  category: 'kit',
-  titleFr: '',
-  titleEn: '',
-  descriptionFr: '',
-  descriptionEn: '',
-  priceCents: 0,
-  currency: 'EUR',
-  previewUrl: '',
-  ctaUrl: '',
-  published: true,
-  sortOrder: 0,
-});
+const CATEGORY_BADGE: Record<MarketplaceProduct['category'], string> = {
+  kit: 'Kit',
+  template: 'Template',
+  component: 'Composant',
+};
 
 export default function MarketplaceAdminPage() {
   const { t } = useAdminI18n();
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MarketplaceProduct | null>(null);
-  const [form, setForm] = useState(emptyProduct());
+  const [form, setForm] = useState<MarketplaceFormState>(emptyMarketplaceProduct());
+  const [saving, setSaving] = useState(false);
 
   const reload = async () => setProducts(await vitrineCmsService.getMarketplaceProducts());
 
@@ -44,173 +37,202 @@ export default function MarketplaceAdminPage() {
     void reload();
   }, []);
 
+  const openNew = () => {
+    setEditing(null);
+    setForm(emptyMarketplaceProduct());
+    setOpen(true);
+  };
+
+  const openEdit = (p: MarketplaceProduct) => {
+    setEditing(p);
+    const { id: _id, ...rest } = p;
+    setForm(rest);
+    setOpen(true);
+  };
+
   const save = async () => {
-    if (!form.slug.trim() || !form.titleFr.trim()) {
-      toast.error('Slug et titre FR requis');
+    if (!form.titleFr.trim()) {
+      toast.error(t('forms.marketplace.validationTitle'));
       return;
     }
-    if (editing) {
-      const updated = await vitrineCmsService.updateMarketplaceProduct(editing.id, form);
-      if (!updated) {
-        toast.error(t('forms.shared.saveError'));
-        return;
-      }
-    } else {
-      const created = await vitrineCmsService.createMarketplaceProduct(form);
-      if (!created) {
-        toast.error(t('forms.shared.saveError'));
-        return;
-      }
+    if (!form.slug.trim() && !form.titleFr.trim()) {
+      toast.error(t('forms.marketplace.validationSlug'));
+      return;
     }
-    toast.success(t('forms.shared.save'));
-    setOpen(false);
-    await reload();
+
+    const catCfg = getCategoryFormConfig(form.category);
+    if (catCfg.requireDelivery && !form.deliveryUrl.trim()) {
+      toast.error(t('forms.marketplace.validationDelivery'));
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await vitrineCmsService.updateMarketplaceProduct(editing.id, form);
+      } else {
+        await vitrineCmsService.createMarketplaceProduct(form);
+      }
+      toast.success(t('forms.shared.save'));
+      setOpen(false);
+      await reload();
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : '';
+      toast.error(
+        detail
+          ? t('forms.shared.saveErrorDetail', { detail })
+          : t('forms.shared.saveError')
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyDeliveryUrl = async (url: string) => {
+    if (!url.trim()) {
+      toast.error(t('forms.marketplace.deliveryMissing'));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url.trim());
+      toast.success(t('forms.marketplace.deliveryCopied'));
+    } catch {
+      toast.error(t('forms.shared.saveError'));
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm(t('forms.marketplace.confirmDelete'))) return;
+    if (await vitrineCmsService.deleteMarketplaceProduct(id)) {
+      toast.success(t('forms.marketplace.deleted'));
+      await reload();
+    } else {
+      toast.error(t('forms.shared.saveError'));
+    }
   };
 
   return (
     <div className="space-y-6">
       <AdminPageToolbar>
-        <Button
-          className="rounded-xl"
-          onClick={() => {
-            setEditing(null);
-            setForm(emptyProduct());
-            setOpen(true);
-          }}
-        >
+        <Button className="rounded-xl" onClick={openNew}>
           <Plus className="h-4 w-4 mr-2" />
-          Nouveau produit
+          {t('forms.marketplace.newProduct')}
         </Button>
       </AdminPageToolbar>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {products.map((p) => (
-          <Card key={p.id}>
-            <CardHeader className="flex flex-row justify-between gap-2">
-              <div>
-                <CardTitle className="text-base">{p.titleFr}</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  {p.category} · {(p.priceCents / 100).toFixed(0)} {p.currency}
-                </p>
-              </div>
-              <div className="flex gap-1">
-                <Badge variant={p.published ? 'default' : 'secondary'}>
-                  {p.published ? 'Publié' : 'Masqué'}
-                </Badge>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => {
-                    setEditing(p);
-                    const { id: _id, ...rest } = p;
-                    setForm(rest);
-                    setOpen(true);
-                  }}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={async () => {
-                    if (!confirm('Supprimer ce produit ?')) return;
-                    if (await vitrineCmsService.deleteMarketplaceProduct(p.id)) await reload();
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+      {products.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            {t('forms.marketplace.empty')}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {products.map((p) => (
+            <Card key={p.id} className="overflow-hidden">
+              {p.previewUrl ? (
+                <div className="aspect-video w-full border-b border-border/50 bg-muted/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={
+                      p.previewUrl.startsWith('http')
+                        ? p.previewUrl
+                        : resolveVitrineAssetUrl(p.previewUrl)
+                    }
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : null}
+              <CardHeader className="flex flex-row items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="text-base leading-snug">{p.titleFr}</CardTitle>
+                    {p.isFeatured ? (
+                      <Badge variant="outline" className="gap-1 text-amber-600 border-amber-500/40">
+                        <Star className="h-3 w-3 fill-current" />
+                        {t('forms.marketplace.featuredShort')}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground font-mono truncate">/marketplace · {p.slug}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {CATEGORY_BADGE[p.category]} · {formatPriceFromCents(p.priceCents, p.currency)} ·{' '}
+                    {t('forms.marketplace.orderLabel', { n: p.sortOrder })}
+                  </p>
+                  <p className="text-xs flex items-center gap-1.5">
+                    <PackageCheck
+                      className={`h-3.5 w-3.5 shrink-0 ${p.deliveryUrl ? 'text-green-600' : 'text-muted-foreground'}`}
+                    />
+                    <span className={p.deliveryUrl ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground'}>
+                      {p.deliveryUrl
+                        ? t('forms.marketplace.deliveryConfigured')
+                        : t('forms.marketplace.deliveryMissing')}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <Badge variant={p.published ? 'default' : 'secondary'}>
+                    {p.published ? t('forms.marketplace.statusPublished') : t('forms.marketplace.statusHidden')}
+                  </Badge>
+                  <div className="flex gap-1">
+                    {p.deliveryUrl ? (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title={t('forms.marketplace.deliveryCopy')}
+                          onClick={() => copyDeliveryUrl(p.deliveryUrl)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" asChild>
+                          <a href={p.deliveryUrl} target="_blank" rel="noopener noreferrer" title={t('forms.marketplace.deliveryOpen')}>
+                            <PackageCheck className="h-4 w-4 text-green-600" />
+                          </a>
+                        </Button>
+                      </>
+                    ) : null}
+                    {p.ctaUrl ? (
+                      <Button size="icon" variant="ghost" asChild>
+                        <a href={p.ctaUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    ) : null}
+                    <Button size="icon" variant="outline" onClick={() => openEdit(p)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="destructive" onClick={() => remove(p.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Store className="h-5 w-5" />
-              Produit marketplace
+              {editing ? t('forms.marketplace.titleEdit') : t('forms.marketplace.titleNew')}
             </DialogTitle>
+            <DialogDescription>{t('forms.marketplace.desc')}</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-3 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Slug</Label>
-                <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
-              </div>
-              <div>
-                <Label>Catégorie</Label>
-                <Select
-                  value={form.category}
-                  onValueChange={(v) =>
-                    setForm({ ...form, category: v as MarketplaceProduct['category'] })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kit">Kit</SelectItem>
-                    <SelectItem value="template">Template</SelectItem>
-                    <SelectItem value="component">Composant</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Input
-              placeholder="Titre FR"
-              value={form.titleFr}
-              onChange={(e) => setForm({ ...form, titleFr: e.target.value })}
-            />
-            <Input
-              placeholder="Titre EN"
-              value={form.titleEn}
-              onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
-            />
-            <Textarea
-              placeholder="Description FR"
-              value={form.descriptionFr}
-              onChange={(e) => setForm({ ...form, descriptionFr: e.target.value })}
-              rows={3}
-            />
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label>Prix (centimes)</Label>
-                <Input
-                  type="number"
-                  value={form.priceCents}
-                  onChange={(e) => setForm({ ...form, priceCents: Number(e.target.value) || 0 })}
-                />
-              </div>
-              <div>
-                <Label>Devise</Label>
-                <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />
-              </div>
-              <div>
-                <Label>Ordre</Label>
-                <Input
-                  type="number"
-                  value={form.sortOrder}
-                  onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-            <Input
-              placeholder="URL CTA (mailto ou lien)"
-              value={form.ctaUrl}
-              onChange={(e) => setForm({ ...form, ctaUrl: e.target.value })}
-            />
-            <div className="flex items-center gap-2">
-              <Switch checked={form.published} onCheckedChange={(v) => setForm({ ...form, published: v })} />
-              <Label>Visible sur /marketplace</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+
+          <MarketplaceProductForm form={form} onChange={setForm} />
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
               {t('forms.shared.cancel')}
             </Button>
-            <Button onClick={save}>{t('forms.shared.save')}</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? t('forms.shared.saving') : t('forms.shared.save')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
