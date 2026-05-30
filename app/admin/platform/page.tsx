@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AdminPageToolbar } from '@/components/admin/AdminPageToolbar';
 import { useAdminI18n } from '@/components/admin/AdminI18nProvider';
 import { toast } from 'sonner';
 import {
@@ -175,11 +174,6 @@ export default function AdminPlatformPage() {
 
   return (
     <div className="space-y-6">
-      <AdminPageToolbar
-        title={t('nav.platform.heading')}
-        description={t('nav.platform.description')}
-      />
-
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="analytics" className="gap-1.5">
