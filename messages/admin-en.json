@@ -82,6 +82,11 @@
       "heading": "Marketplace catalog",
       "description": "Kits, templates and components on /marketplace."
     },
+    "platform": {
+      "name": "Platform",
+      "heading": "Analytics, CRM & global",
+      "description": "Site analytics, sales pipeline, and live availability on the public site."
+    },
     "vitrine": {
       "name": "Site+",
       "heading": "Advanced public content",

@@ -93,9 +93,9 @@ export function AdminNotificationsSettings() {
       const keys: Record<string, string> = {};
 
       if ('serviceWorker' in navigator && vapidPublic) {
-        const reg = await navigator.serviceWorker.register('/sw.js').catch(() => null);
-        await reg?.ready;
-        if (reg?.pushManager) {
+        await navigator.serviceWorker.register('/sw.js').catch(() => null);
+        const reg = await navigator.serviceWorker.ready;
+        if (reg.pushManager) {
           try {
             let sub = await reg.pushManager.getSubscription();
             if (!sub) {
@@ -109,10 +109,14 @@ export function AdminNotificationsSettings() {
               const p256 = sub.getKey('p256dh');
               const auth = sub.getKey('auth');
               if (p256) {
-                keys.p256dh = btoa(String.fromCharCode(...new Uint8Array(p256)));
+                keys.p256dh = btoa(
+                  String.fromCharCode(...Array.from(new Uint8Array(p256)))
+                );
               }
               if (auth) {
-                keys.auth = btoa(String.fromCharCode(...new Uint8Array(auth)));
+                keys.auth = btoa(
+                  String.fromCharCode(...Array.from(new Uint8Array(auth)))
+                );
               }
             }
           } catch (e) {
@@ -163,11 +167,13 @@ export function AdminNotificationsSettings() {
     value: boolean
   ) => {
     patchAdminPreferences({
-      notifications: mergeNotifications(n, {
+      notifications: {
+        ...n,
         events: {
+          ...n.events,
           [event]: { ...n.events[event], [channel]: value },
         },
-      }),
+      },
     });
     toast.success(t('settings.notifications.saved'));
   };

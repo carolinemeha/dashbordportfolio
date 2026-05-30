@@ -2,6 +2,7 @@ import { adminRpc } from './admin-rpc';
 import { runAdminDataOp } from './admin-data-ops';
 import {
   normalizeAdminPreferences,
+  normalizeNotificationPrefs,
   type AdminPreferencesV1,
 } from './admin-preferences';
 import type { LocaleText } from './locale-text';

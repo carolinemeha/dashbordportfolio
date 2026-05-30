@@ -507,5 +507,51 @@
     "defaultSuccess": "Image mise à jour.",
     "profileSuccess": "Photo de profil mise à jour.",
     "coverSuccess": "Image de couverture mise à jour."
+  },
+  "platform": {
+    "refresh": "Actualiser",
+    "tabs": {
+      "analytics": "Analytics",
+      "crm": "CRM",
+      "global": "Global"
+    },
+    "analytics": {
+      "lead": "Audience en direct, pages vues, sessions, pays, technologies et projets les plus consultés sur la vitrine.",
+      "liveVisitors": "Visiteurs en direct",
+      "pageViews7d": "Pages vues (7 j)",
+      "sessions7d": "Sessions (7 j)",
+      "topProject": "Projet le plus consulté",
+      "countries": "Pays (7 j)",
+      "technologies": "Technologies (30 j)",
+      "noData": "Pas encore de données sur cette période."
+    },
+    "crm": {
+      "lead": "Contacts issus des formulaires Hub et Contact de la vitrine.",
+      "contacts": "Contacts",
+      "followUps": "Relances planifiées",
+      "empty": "Aucun contact pour le moment.",
+      "loadError": "Impossible de charger le CRM.",
+      "stageUpdated": "Étape mise à jour",
+      "done": "Fait",
+      "stages": {
+        "lead": "Lead",
+        "qualified": "Qualifié",
+        "proposal": "Proposition",
+        "won": "Gagné",
+        "lost": "Perdu"
+      }
+    },
+    "global": {
+      "lead": "Statut et délai affichés sur la barre globale du site public (en bas à droite).",
+      "title": "Disponibilité vitrine",
+      "statusLabel": "Statut",
+      "available": "Disponible",
+      "busy": "Occupée",
+      "mission": "En mission",
+      "responseLabel": "Délai de réponse (minutes)",
+      "save": "Enregistrer",
+      "saved": "Disponibilité mise à jour sur la vitrine",
+      "error": "Erreur lors de l'enregistrement"
+    }
   }
 }

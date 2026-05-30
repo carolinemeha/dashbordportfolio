@@ -16,6 +16,7 @@ import {
   Newspaper,
   Store,
   Sparkles,
+  BarChart3,
 } from 'lucide-react';
 
 /** Aligné sur le frontend (next-intl) : `fr` et `en` uniquement. */
@@ -40,6 +41,7 @@ export const ADMIN_NAV_DEFS: AdminNavDef[] = [
   { id: 'testimonials', href: '/admin/testimonials', icon: MessageSquare },
   { id: 'blog', href: '/admin/blog', icon: Newspaper },
   { id: 'marketplace', href: '/admin/marketplace', icon: Store },
+  { id: 'platform', href: '/admin/platform', icon: BarChart3 },
   { id: 'vitrine', href: '/admin/vitrine', icon: Sparkles },
   { id: 'newsletter', href: '/admin/newsletter', icon: Rss },
   { id: 'contact', href: '/admin/contact', icon: Mail },

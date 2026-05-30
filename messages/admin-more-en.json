@@ -508,5 +508,51 @@
     "defaultSuccess": "Image updated.",
     "profileSuccess": "Profile photo updated.",
     "coverSuccess": "Cover image updated."
+  },
+  "platform": {
+    "refresh": "Refresh",
+    "tabs": {
+      "analytics": "Analytics",
+      "crm": "CRM",
+      "global": "Global"
+    },
+    "analytics": {
+      "lead": "Live audience, page views, sessions, countries, technologies, and top projects on the public site.",
+      "liveVisitors": "Live visitors",
+      "pageViews7d": "Page views (7d)",
+      "sessions7d": "Sessions (7d)",
+      "topProject": "Top project",
+      "countries": "Countries (7d)",
+      "technologies": "Technologies (30d)",
+      "noData": "No data for this period yet."
+    },
+    "crm": {
+      "lead": "Contacts from Hub and contact forms on the public site.",
+      "contacts": "Contacts",
+      "followUps": "Scheduled follow-ups",
+      "empty": "No contacts yet.",
+      "loadError": "Could not load CRM.",
+      "stageUpdated": "Stage updated",
+      "done": "Done",
+      "stages": {
+        "lead": "Lead",
+        "qualified": "Qualified",
+        "proposal": "Proposal",
+        "won": "Won",
+        "lost": "Lost"
+      }
+    },
+    "global": {
+      "lead": "Status and response time shown on the public site’s global bar (bottom right).",
+      "title": "Public availability",
+      "statusLabel": "Status",
+      "available": "Available",
+      "busy": "Busy",
+      "mission": "On mission",
+      "responseLabel": "Response time (minutes)",
+      "save": "Save",
+      "saved": "Availability updated on the public site",
+      "error": "Could not save"
+    }
   }
 }
